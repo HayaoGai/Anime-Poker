@@ -1,0 +1,24 @@
+# 跨子專案共通規則。Cocos 專屬規則見 client/.gitignore。
+
+# Node.js
+node_modules/
+package-lock.json
+.pnpm-debug.log*
+
+# TypeScript
+*.js.map
+
+# IDE - VSCode
+.vscode/
+
+# IDE - JetBrains
+.idea/
+
+# OS
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Logs
+*.log
+logs/

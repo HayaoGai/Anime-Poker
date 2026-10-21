@@ -1,0 +1,25 @@
+# Cocos Creator 3.x 專案
+
+# 編輯器自動產生的資源快取，可重新生成
+library/
+
+# 暫存檔案
+temp/
+
+# 本機編輯器設定（視窗佈局等個人設定）
+local/
+
+# 建置輸出目錄
+build/
+
+# 編輯器個人偏好設定
+profiles/
+
+# NPM
+node_modules/
+
+# VSCode
+.vscode/
+
+# WebStorm
+.idea/
