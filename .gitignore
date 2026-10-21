@@ -2,11 +2,19 @@
 
 # Node.js
 node_modules/
+# 本專案使用 pnpm，避免誤用 npm / yarn 產生的 lockfile
 package-lock.json
+yarn.lock
 .pnpm-debug.log*
 
 # TypeScript
 *.js.map
+
+# 伺服器建置輸出
+dist/
+
+# Cloudflare Wrangler 本機快取
+.wrangler/
 
 # IDE - VSCode
 .vscode/

@@ -1,0 +1,28 @@
+# Render Blueprint：伺服器在 push 到 master 時自動部署。
+# 只有伺服器相關路徑變動時才重新部署，避免單純改客戶端就重啟伺服器、清空進行中的房間。
+services:
+  - type: web
+    name: anime-poker-server
+    runtime: node
+    plan: free
+    region: singapore
+    branch: master
+    # 透過 corepack 使用 package.json 的 packageManager 指定的 pnpm 版本，只安裝伺服器需要的依賴
+    buildCommand: corepack pnpm install --frozen-lockfile --filter @anime-poker/server && corepack pnpm -F @anime-poker/server build
+    # 直接以 node 啟動，讓 SIGTERM 直達伺服器程序以觸發 Colyseus 的 graceful shutdown
+    startCommand: node --enable-source-maps server/dist/index.mjs
+    healthCheckPath: /health
+    autoDeployTrigger: commit
+    buildFilter:
+      paths:
+        - server/**
+        - shared/**
+        - package.json
+        - pnpm-lock.yaml
+        - pnpm-workspace.yaml
+        - render.yaml
+    envVars:
+      - key: NODE_VERSION
+        value: "24"
+      - key: COREPACK_ENABLE_DOWNLOAD_PROMPT
+        value: "0"

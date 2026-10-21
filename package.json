@@ -1,0 +1,20 @@
+{
+  "name": "anime-poker",
+  "private": true,
+  "type": "module",
+  "packageManager": "pnpm@11.11.0",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "dev:server": "pnpm -F @anime-poker/server dev",
+    "build:server": "pnpm -F @anime-poker/server build",
+    "start:server": "pnpm -F @anime-poker/server start",
+    "test": "pnpm -F @anime-poker/server test",
+    "typecheck": "pnpm -F @anime-poker/server typecheck",
+    "wrangler": "pnpm -F @anime-poker/tools exec wrangler",
+    "sync:shared": "node tools/sync-shared.mjs",
+    "deploy:web": "node tools/deploy-web.mjs",
+    "release:apk": "node tools/release-apk.mjs"
+  }
+}

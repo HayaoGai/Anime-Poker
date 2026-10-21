@@ -1,0 +1,13 @@
+packages:
+  - server
+  - tools
+
+# pnpm 預設不執行依賴的 install script，只放行確實需要的套件
+allowBuilds:
+  esbuild: true          # 伺服器打包：安裝時驗證平台對應的原生 binary
+  msgpackr-extract: true # Colyseus 訊息序列化的原生加速
+  workerd: true          # wrangler 的本機執行環境
+
+# 由 pnpm 自動加入：此版本發佈未滿 minimumReleaseAge，明確允許安裝
+minimumReleaseAgeExclude:
+  - '@colyseus/core@0.18.21'
