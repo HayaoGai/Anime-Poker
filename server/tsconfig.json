@@ -14,5 +14,6 @@
       "@shared/*": ["../shared/src/*"]
     }
   },
-  "include": ["src", "test", "*.config.ts"]
+  // 測試會載入客戶端的純邏輯模組（如 RoomSession），需要客戶端的 Colyseus 全域型別
+  "include": ["src", "test", "*.config.ts", "../client/types/colyseus.d.ts"]
 }

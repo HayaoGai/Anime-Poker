@@ -1,11 +1,34 @@
 import { Observable, type Unsubscribe } from '../core/Observable';
-import { ClientMessage, ServerMessage, type ClientPayloads, type ServerPayloads } from '../shared/protocol';
+import { ClientMessage, NoticeCode, ServerMessage, type ClientPayloads, type ServerPayloads } from '../shared/protocol';
 import { TimeSync } from './TimeSync';
 
 export type ConnectionState = 'connected' | 'reconnecting' | 'closed';
 
 const TIME_SYNC_INTERVAL_MS = 30_000;
 const TIME_SYNC_BURST = 4;
+/** 送出離開後等待伺服器關閉連線的時間，逾時由客戶端自行關閉 */
+const LEAVE_TIMEOUT_MS = 1500;
+
+/**
+ * 離開房間且不再自動重連。
+ * 部署環境（Render 的代理）不一定會把伺服器端的關閉轉送到客戶端：連線會懸著，約 20 秒後以 1006 斷線，
+ * SDK 會誤判為非自願斷線而不斷重連。因此先關閉自動重連，送出離開後若逾時沒有收到關閉，就由客戶端關閉連線。
+ */
+export function leaveRoom(room: Colyseus.Room): Promise<void> {
+    room.reconnection.enabled = false;
+    return new Promise((resolve) => {
+        const timer = setTimeout(() => {
+            void room.leave(false).catch(() => undefined);
+            resolve();
+        }, LEAVE_TIMEOUT_MS);
+        room.leave(true)
+            .catch(() => undefined)
+            .then(() => {
+                clearTimeout(timer);
+                resolve();
+            });
+    });
+}
 
 /**
  * 包裝一個 Colyseus 房間：帶型別的收發、連線狀態、伺服器時間校正。
@@ -25,8 +48,12 @@ export class RoomSession<State = unknown> {
     constructor(room: Colyseus.Room<State>, options: { timeSync?: boolean } = {}) {
         this.room = room;
         room.onMessage('*', (type, payload) => this.dispatch(String(type), payload));
-        room.onDrop(() => (this.connection.value = 'reconnecting'));
+        // 'closed' 是終止狀態：離開或房間解散後，SDK 才收到的斷線事件不再改變狀態
+        room.onDrop(() => {
+            if (this.connection.value !== 'closed') this.connection.value = 'reconnecting';
+        });
         room.onReconnect(() => {
+            if (this.connection.value === 'closed') return;
             this.connection.value = 'connected';
             if (options.timeSync) this.syncTime(TIME_SYNC_BURST);
         });
@@ -75,7 +102,7 @@ export class RoomSession<State = unknown> {
     async leave(): Promise<void> {
         if (this.connection.value === 'closed') return;
         this.close();
-        await this.room.leave(true).catch(() => undefined);
+        await leaveRoom(this.room);
     }
 
     private syncTime(times: number): void {
@@ -85,6 +112,14 @@ export class RoomSession<State = unknown> {
     }
 
     private dispatch(type: string, payload: unknown): void {
+        this.deliver(type, payload);
+        // 房間解散：通知送達後立即結束這個連線，不等伺服器關閉（見 leaveRoom）
+        if (type === ServerMessage.Notice && (payload as ServerPayloads[typeof ServerMessage.Notice]).code === NoticeCode.RoomDissolved) {
+            void this.leave();
+        }
+    }
+
+    private deliver(type: string, payload: unknown): void {
         const set = this.listeners.get(type);
         if (set && set.size) {
             for (const listener of [...set]) listener(payload);

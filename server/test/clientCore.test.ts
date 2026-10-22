@@ -5,7 +5,9 @@ import { encodePng } from '../../client/assets/scripts/core/PngEncoder';
 import { DisposeBag } from '../../client/assets/scripts/core/ViewModel';
 import { resolveLanguage } from '../../client/assets/scripts/i18n/language';
 import { hostNickname, mySeatIndex, toTableSnapshot } from '../../client/assets/scripts/models/TableSnapshot';
+import { RoomSession } from '../../client/assets/scripts/net/RoomSession';
 import { TimeSync } from '../../client/assets/scripts/net/TimeSync';
+import { NoticeCode, ServerMessage } from '@shared/protocol';
 
 // 客戶端中不依賴 Cocos 引擎的純邏輯模組
 
@@ -184,5 +186,71 @@ describe('encodePng', () => {
         expect(raw.length).toBeGreaterThan(0xffff);
         expect(raw[1]).toBe(height - 1);
         expect(raw[(height - 1) * rowBytes + 1]).toBe(0);
+    });
+});
+
+describe('RoomSession', () => {
+    /** 模擬 SDK 的 Room：可手動觸發訊息與斷線；leave() 預設永遠不回應（模擬代理吞掉伺服器的關閉） */
+    function fakeRoom() {
+        const signal = () => {
+            const callbacks: ((...args: any[]) => void)[] = [];
+            return Object.assign((cb: (...args: any[]) => void) => void callbacks.push(cb), {
+                fire: (...args: any[]) => callbacks.forEach((cb) => cb(...args)),
+                remove: () => undefined,
+            });
+        };
+        let onAny: (type: string, payload: unknown) => void = () => undefined;
+        const room = {
+            sessionId: 'me',
+            state: undefined,
+            reconnection: { enabled: true },
+            onDrop: signal(),
+            onReconnect: signal(),
+            onLeave: signal(),
+            onStateChange: signal(),
+            onMessage: (_type: string, cb: typeof onAny) => void (onAny = cb),
+            send: vi.fn(),
+            leave: vi.fn((_consented?: boolean) => new Promise<number>(() => undefined)),
+            receive: (type: string, payload: unknown) => onAny(type, payload),
+        };
+        return room;
+    }
+
+    it('收到房間解散通知：先送達通知，再結束連線並關閉自動重連', () => {
+        const room = fakeRoom();
+        const session = new RoomSession(room as never);
+        const notices: unknown[] = [];
+        session.on(ServerMessage.Notice, (p) => notices.push(p.code));
+        room.receive(ServerMessage.Notice, { code: NoticeCode.RoomDissolved });
+        expect(notices).toEqual([NoticeCode.RoomDissolved]);
+        expect(session.connection.value).toBe('closed');
+        expect(room.reconnection.enabled).toBe(false);
+        expect(room.leave).toHaveBeenCalledWith(true);
+    });
+
+    it('伺服器沒有關閉連線時，leave() 逾時後由客戶端關閉', async () => {
+        vi.useFakeTimers();
+        try {
+            const room = fakeRoom();
+            const session = new RoomSession(room as never);
+            const done = vi.fn();
+            void session.leave().then(done);
+            await vi.advanceTimersByTimeAsync(1000);
+            expect(done).not.toHaveBeenCalled();
+            await vi.advanceTimersByTimeAsync(600);
+            expect(done).toHaveBeenCalled();
+            expect(room.leave).toHaveBeenLastCalledWith(false);
+        } finally {
+            vi.useRealTimers();
+        }
+    });
+
+    it('離開後才收到的斷線與重連事件不改變狀態', () => {
+        const room = fakeRoom();
+        const session = new RoomSession(room as never);
+        void session.leave();
+        room.onDrop.fire(1006);
+        room.onReconnect.fire();
+        expect(session.connection.value).toBe('closed');
     });
 });

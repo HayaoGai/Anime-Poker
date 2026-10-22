@@ -2,6 +2,7 @@ import { Observable } from '../core/Observable';
 import { ViewModel } from '../core/ViewModel';
 import { tableStore } from '../models/TableStore';
 import { gameClient, type ClientErrorCode } from '../net/GameClient';
+import { leaveRoom } from '../net/RoomSession';
 import { RoomName } from '../shared/constants';
 import { RoomPhase, type RoomMetadata } from '../shared/protocol';
 
@@ -35,7 +36,7 @@ export class LobbyViewModel extends ViewModel {
         try {
             const lobby = await gameClient.joinLobby();
             if (this.disposed) {
-                void lobby.leave();
+                void leaveRoom(lobby);
                 return;
             }
             this.lobby = lobby;
@@ -73,7 +74,7 @@ export class LobbyViewModel extends ViewModel {
 
     dispose(): void {
         this.disposed = true;
-        void this.lobby?.leave();
+        if (this.lobby) void leaveRoom(this.lobby);
         this.lobby = null;
         super.dispose();
     }
