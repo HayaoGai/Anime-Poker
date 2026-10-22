@@ -7,7 +7,7 @@ import path from 'node:path';
 import { CLIENT_DIR, info, success } from '../lib/common.mjs';
 import { bell, finalize, mix, noise, noiseSource, note, reverb, silence, tone, writeWav } from './lib/synth.mjs';
 
-const OUT = path.join(CLIENT_DIR, 'assets', 'audio', 'sfx');
+const OUT = path.join(CLIENT_DIR, 'assets', 'resources', 'audio', 'sfx');
 
 /** 指數滑音：t 秒內從 a 滑到 b */
 const glide = (a, b, seconds) => (t) => a * (b / a) ** Math.min(1, t / seconds);

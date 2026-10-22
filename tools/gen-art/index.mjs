@@ -18,7 +18,8 @@ import { generateParticles } from './particles.mjs';
 import { generateAppIcon, generatePlaceholders } from './placeholders.mjs';
 import { NINE_SLICE, generateUi } from './ui.mjs';
 
-const TEXTURES = path.join(CLIENT_DIR, 'assets', 'textures');
+// 放在 resources 底下，客戶端才能依 id 動態載入（例如依卡牌字串載入牌面、依頭像 id 載入頭像與人聲）
+const TEXTURES = path.join(CLIENT_DIR, 'assets', 'resources', 'textures');
 
 /** 建置時合併成圖集的資料夾與圖集大小 */
 const ATLASES = { cards: 2048, chips: 1024, icons: 1024, ui: 1024 };

@@ -4,6 +4,11 @@
 
   /* Add your custom configuration here. */
   "compilerOptions": {
-    "strict": false
+    "strict": true,
+    /* Cocos 編輯器以自己的編譯器處理腳本，此設定只影響 IDE 與 pnpm typecheck；TS 6+ 已移除 node10 解析 */
+    "moduleResolution": "bundler",
+    /* 執行環境為現代瀏覽器與 Android V8，皆支援 ES2020；與 shared/tsconfig.json 一致 */
+    "lib": ["ES2020", "DOM"],
+    "skipLibCheck": true
   }
 }

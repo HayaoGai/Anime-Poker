@@ -25,7 +25,9 @@ const { flags } = parseArgs();
 
 if (!flags.has('allow-dirty')) ensureCleanTree();
 
-if (run(process.execPath, [path.join(ROOT, 'tools', 'sync-shared.mjs'), '--check']) !== 0) process.exit(1);
+for (const script of ['sync-shared.mjs', 'sync-vendor.mjs']) {
+    if (run(process.execPath, [path.join(ROOT, 'tools', script), '--check']) !== 0) process.exit(1);
+}
 
 const version = getVersion();
 const commitHash = git('rev-parse', 'HEAD');
