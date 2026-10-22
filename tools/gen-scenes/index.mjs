@@ -11,15 +11,16 @@ import { CLIENT_DIR, ROOT, info, parseArgs, success } from '../lib/common.mjs';
 import { writeCommonPrefabs } from './common.mjs';
 import { ownUuid } from './lib/cocos.mjs';
 import { writeLobby } from './scenes/lobby.mjs';
+import { writeTable } from './scenes/table.mjs';
 import { writeTitleScene } from './scenes/title.mjs';
 
 /** 建置包含的場景，第一個為起始場景 */
-const SCENES = ['scenes/Title.scene', 'scenes/Lobby.scene'];
+const SCENES = ['scenes/Title.scene', 'scenes/Lobby.scene', 'scenes/Table.scene'];
 
 const { flags } = parseArgs();
 const force = flags.has('force');
 
-const written = [...writeCommonPrefabs({ force }), writeTitleScene({ force }), ...writeLobby({ force })].filter(Boolean);
+const written = [...writeCommonPrefabs({ force }), writeTitleScene({ force }), ...writeLobby({ force }), ...writeTable({ force })].filter(Boolean);
 for (const file of written) info(`產生 ${path.relative(ROOT, file)}`);
 
 // 建置設定的場景清單與起始場景

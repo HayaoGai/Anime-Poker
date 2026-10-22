@@ -67,6 +67,7 @@ export const zhHant = {
     'table.leaveConfirm': '確定要離開牌桌嗎？\n中途離開會自動棄牌。',
     'table.spectateConfirm': '確定要改為觀戰嗎？\n中途離開會自動棄牌。',
     'table.waitingNextHand': '下一手開始參賽',
+    'table.spectating': '觀戰中',
     'table.disconnected': '斷線中',
     'table.timedOut': '超時',
     'table.gameOver': '{name} 獲得最後勝利！',

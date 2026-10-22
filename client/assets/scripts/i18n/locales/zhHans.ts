@@ -65,6 +65,7 @@ export const zhHans: Record<I18nKey, string> = {
     'table.leaveConfirm': '确定要离开牌桌吗？\n中途离开会自动弃牌。',
     'table.spectateConfirm': '确定要改为观战吗？\n中途离开会自动弃牌。',
     'table.waitingNextHand': '下一手开始参赛',
+    'table.spectating': '观战中',
     'table.disconnected': '断线中',
     'table.timedOut': '超时',
     'table.gameOver': '{name} 获得最后胜利！',

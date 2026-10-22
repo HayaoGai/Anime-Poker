@@ -65,6 +65,7 @@ export const en: Record<I18nKey, string> = {
     'table.leaveConfirm': 'Leave the table?\nYour hand will be folded.',
     'table.spectateConfirm': 'Switch to spectating?\nYour hand will be folded.',
     'table.waitingNextHand': 'Joining next hand',
+    'table.spectating': 'Spectating',
     'table.disconnected': 'Disconnected',
     'table.timedOut': 'Timed out',
     'table.gameOver': '{name} wins the game!',

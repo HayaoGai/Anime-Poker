@@ -6,7 +6,7 @@ import type { PokerState } from './schema';
 import { Table, type TableOptions } from './Table';
 
 /** 測試可覆寫 Table 的時間設定（不經由客戶端，客戶端無法影響） */
-export const pokerRoomOverrides: Partial<Pick<TableOptions, 'pacing' | 'botThinkMs' | 'actionTimeoutMs' | 'createDeck'>> & {
+export const pokerRoomOverrides: Partial<Pick<TableOptions, 'pacing' | 'botThinkMs' | 'actionTimeoutMs' | 'createDeck' | 'rng'>> & {
     reconnectGraceMs?: number;
 } = {};
 
