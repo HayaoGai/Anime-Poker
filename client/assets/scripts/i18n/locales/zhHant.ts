@@ -15,7 +15,7 @@ export const zhHant = {
     'common.retry': '重試',
     'common.bb': '{value} BB',
 
-    'title.tapToStart': '點按任意處開始',
+    'title.tapToStart': '點按任意鍵開始',
     'title.exitConfirm': '確定要離開遊戲嗎？',
     'credits.title': '製作人員',
     'credits.role': '企劃・程式・美術',

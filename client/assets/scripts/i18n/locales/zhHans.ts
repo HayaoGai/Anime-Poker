@@ -13,7 +13,7 @@ export const zhHans: Record<I18nKey, string> = {
     'common.retry': '重试',
     'common.bb': '{value} BB',
 
-    'title.tapToStart': '点击任意处开始',
+    'title.tapToStart': '点击任意键开始',
     'title.exitConfirm': '确定要退出游戏吗？',
     'credits.title': '制作人员',
     'credits.role': '策划・程序・美术',

@@ -13,7 +13,7 @@ export const en: Record<I18nKey, string> = {
     'common.retry': 'Retry',
     'common.bb': '{value} BB',
 
-    'title.tapToStart': 'Tap anywhere to start',
+    'title.tapToStart': 'Press any key to start',
     'title.exitConfirm': 'Quit the game?',
     'credits.title': 'Credits',
     'credits.role': 'Design · Programming · Art',

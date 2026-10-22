@@ -13,5 +13,12 @@
       "embedWebDebugger": false,
       "useWebGPU": false
     }
-  }
+  },
+  "startScene": "c48444eb-6b50-448b-8709-e5fa61857505",
+  "scenes": [
+    {
+      "url": "db://assets/scenes/Title.scene",
+      "uuid": "c48444eb-6b50-448b-8709-e5fa61857505"
+    }
+  ]
 }

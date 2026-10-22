@@ -67,6 +67,10 @@ const ITEMS = {
     btn_circle_lavender: () => circleButton('#d2c2ff', C.lavender, '#7b5fe0'),
     btn_circle_dark: () => circleButton('#6b5f8f', C.purpleDeep, '#2a2342'),
 
+    // ---- 純色 ----
+    // 著色後作為遮罩、純色背景（Sprite 顏色相乘，白色才能得到任意顏色）
+    white: () => svg(16, 16, `<rect width="16" height="16" fill="#ffffff"/>`),
+
     // ---- 面板 ----
     panel_popup: () =>
         svg(
