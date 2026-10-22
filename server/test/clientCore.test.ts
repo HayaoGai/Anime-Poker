@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from 'vitest';
 import { computed, Observable } from '../../client/assets/scripts/core/Observable';
 import { DisposeBag } from '../../client/assets/scripts/core/ViewModel';
 import { resolveLanguage } from '../../client/assets/scripts/i18n/language';
+import { hostNickname, mySeatIndex, toTableSnapshot } from '../../client/assets/scripts/models/TableSnapshot';
 import { TimeSync } from '../../client/assets/scripts/net/TimeSync';
 
 // 客戶端中不依賴 Cocos 引擎的純邏輯模組
@@ -110,5 +111,35 @@ describe('TimeSync', () => {
         sync.addSample(0, 300, 10); // rtt 10、offset 295
         // 延遲 0 的樣本已移除（否則結果會是 100）；剩下的延遲相同時取較早者
         expect(sync.offset).toBe(195);
+    });
+});
+
+describe('TableSnapshot', () => {
+    // 模擬 Colyseus 解碼後的狀態：集合有 toArray()
+    const schemaArray = <T>(items: T[]) => ({ toArray: () => items, length: items.length });
+    const seat = (overrides: Record<string, unknown> = {}) => ({
+        occupied: false, sessionId: '', isBot: false, nickname: '', avatarId: '', stack: 0, bet: 0,
+        inHand: false, folded: false, allIn: false, connected: true, shownCards: schemaArray([]), ...overrides,
+    });
+    const state = {
+        phase: 'lobby', hostSessionId: 'h1', spectatorCount: 1, handNumber: 0, buttonSeat: -1, smallBlindSeat: -1, bigBlindSeat: -1,
+        street: '', board: schemaArray(['As']), pots: schemaArray([10]), currentBet: 0, turnSeat: -1, turnDeadline: 0,
+        seats: schemaArray([seat(), seat({ occupied: true, sessionId: 'h1', nickname: 'Host', shownCards: schemaArray(['Kd', 'Kh']) }), seat({ occupied: true, sessionId: 'me', nickname: 'Me' })]),
+    };
+
+    it('轉成純資料並保留座位索引', () => {
+        const snapshot = toTableSnapshot(state);
+        expect(snapshot.seats.map((s) => s.index)).toEqual([0, 1, 2]);
+        expect(snapshot.seats[1].shownCards).toEqual(['Kd', 'Kh']);
+        expect(snapshot.board).toEqual(['As']);
+        expect(snapshot.pots).toEqual([10]);
+    });
+
+    it('找出自己的座位與房主暱稱', () => {
+        const snapshot = toTableSnapshot(state);
+        expect(mySeatIndex(snapshot, 'me')).toBe(2);
+        expect(mySeatIndex(snapshot, 'spectator')).toBe(-1);
+        expect(mySeatIndex(null, 'me')).toBe(-1);
+        expect(hostNickname(snapshot)).toBe('Host');
     });
 });
