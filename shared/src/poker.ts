@@ -1,6 +1,5 @@
 /**
- * 牌局相關的共用定義：街、動作、牌型、錯誤碼。
- * 伺服器只回傳代碼，文字由客戶端依語系翻譯。
+ * 牌局相關的共用定義：街、動作、牌型。
  */
 
 export const Street = {
@@ -52,15 +51,3 @@ export const HandCategory = {
     StraightFlush: 8,
 } as const;
 export type HandCategory = (typeof HandCategory)[keyof typeof HandCategory];
-
-export const ErrorCode = {
-    /** 不在這手牌中（觀戰者、已棄牌、中途加入者） */
-    NotInHand: 'NOT_IN_HAND',
-    NotYourTurn: 'NOT_YOUR_TURN',
-    /** 目前局面不允許此動作，例如有人下注時過牌 */
-    IllegalAction: 'ILLEGAL_ACTION',
-    /** 加注金額不合法：非整數、低於最小加注、超過籌碼 */
-    InvalidAmount: 'INVALID_AMOUNT',
-    HandOver: 'HAND_OVER',
-} as const;
-export type ErrorCode = (typeof ErrorCode)[keyof typeof ErrorCode];

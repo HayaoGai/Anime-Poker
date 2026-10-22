@@ -1,4 +1,6 @@
-import { ActionKind, ActionType, ErrorCode, type PlayerAction } from '@shared/poker';
+import type { ActionRecord, LegalActions } from '@shared/events';
+import { ErrorCode } from '@shared/errors';
+import { ActionKind, ActionType, type PlayerAction } from '@shared/poker';
 
 /** 一位玩家在這手牌中的籌碼狀態，由 HandController 擁有、BettingRound 直接修改 */
 export interface HandPlayer {
@@ -10,29 +12,6 @@ export interface HandPlayer {
     /** 整手牌累計投入 */
     totalCommitted: number;
     folded: boolean;
-    allIn: boolean;
-}
-
-export interface LegalActions {
-    canFold: boolean;
-    canCheck: boolean;
-    /** 跟注要補的金額；0 代表不需要跟注。籌碼不足時為 all-in 的金額 */
-    callAmount: number;
-    canRaise: boolean;
-    /** 最小加注到（raise to）；籌碼不足最小加注時等於 maxRaiseTo（只能 all-in） */
-    minRaiseTo: number;
-    /** 最大加注到 = all-in */
-    maxRaiseTo: number;
-}
-
-export interface ActionRecord {
-    seat: number;
-    kind: ActionKind;
-    /** 這次動作實際投入的籌碼 */
-    paid: number;
-    /** 動作後本輪的總投入 */
-    committed: number;
-    stack: number;
     allIn: boolean;
 }
 

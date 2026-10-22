@@ -1,7 +1,9 @@
-import type { Card } from '@shared/cards';
 import { HandCategory } from '@shared/poker';
 import { describe, expect, it } from 'vitest';
-import { evaluateBest, evaluateFive } from '../src/engine/HandEvaluator';
+import { FULL_DECK, type Card } from '@shared/cards';
+import { fisherYates } from '../src/engine/Deck';
+import { evaluateBest, evaluateFive, scoreHand } from '../src/engine/HandEvaluator';
+import { seededRng } from './helpers';
 
 const hand = (text: string) => text.split(' ') as Card[];
 const categoryOf = (text: string) => evaluateBest(hand(text)).category;
@@ -90,5 +92,31 @@ describe('7 選 5', () => {
 
     it('拒絕張數不合法的輸入', () => {
         expect(() => evaluateBest(hand('As Ks Qs Js'))).toThrow();
+    });
+});
+
+describe('scoreHand（快速計分）', () => {
+    it('與 evaluateBest 的分數在隨機牌組上完全一致', () => {
+        const rng = seededRng(42);
+        for (let i = 0; i < 20_000; i++) {
+            const cards = fisherYates([...FULL_DECK], rng).slice(0, 5 + rng(3));
+            expect(scoreHand(cards)).toBe(evaluateBest(cards).score);
+        }
+    });
+
+    it('涵蓋各種牌型的邊界', () => {
+        for (const text of [
+            'Ah Kh Qh Jh Th 9h 8h',
+            '5d 4d 3d 2d Ad Kc Qs',
+            'As 2s 3s 4s 5h 6h 9c',
+            '9s 9h 9d 9c Ks Kh Kd',
+            'Ks Kh Kd Qc Qs Qh 2d',
+            'Ks Kh Kd Qc Qs 2h 2d',
+            'Js Jh 4d 4c 3s 3h Ad',
+            'Js Jh 4d 4c 3s 3h 2d',
+            'As Js 9s 5s 3s 2s Kd',
+        ]) {
+            expect(scoreHand(hand(text))).toBe(evaluateBest(hand(text)).score);
+        }
     });
 });

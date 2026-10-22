@@ -74,6 +74,87 @@ export function evaluateFive(cards: readonly Card[]): HandValue {
     return { category, score, bestFive: orderByImportance(cards, groups, straightHigh) };
 }
 
+const RANK_VALUE: Record<string, number> = { '2': 2, '3': 3, '4': 4, '5': 5, '6': 6, '7': 7, '8': 8, '9': 9, T: 10, J: 11, Q: 12, K: 13, A: 14 };
+const SUIT_INDEX: Record<string, number> = { s: 0, h: 1, d: 2, c: 3 };
+
+/**
+ * 快速計分：直接統計 5～7 張牌的點數與花色，不列舉組合，分數與 evaluateBest 完全相同。
+ * 供 Monte Carlo 大量模擬使用；需要「最佳 5 張」時請用 evaluateBest。
+ */
+export function scoreHand(cards: readonly Card[]): number {
+    const counts = new Array<number>(15).fill(0);
+    const suitMasks = [0, 0, 0, 0];
+    const suitCounts = [0, 0, 0, 0];
+    let rankMask = 0;
+    for (const card of cards) {
+        const value = RANK_VALUE[card[0]];
+        const suit = SUIT_INDEX[card[1]];
+        counts[value]++;
+        suitMasks[suit] |= 1 << value;
+        suitCounts[suit]++;
+        rankMask |= 1 << value;
+    }
+
+    const flushSuit = suitCounts.findIndex((n) => n >= 5);
+    if (flushSuit !== -1) {
+        const high = straightHighFromMask(suitMasks[flushSuit]);
+        if (high) return encode(HandCategory.StraightFlush, [high]);
+    }
+
+    const quads: number[] = [];
+    const trips: number[] = [];
+    const pairs: number[] = [];
+    const singles: number[] = [];
+    for (let v = 14; v >= 2; v--) {
+        if (counts[v] === 4) quads.push(v);
+        else if (counts[v] === 3) trips.push(v);
+        else if (counts[v] === 2) pairs.push(v);
+        else if (counts[v] === 1) singles.push(v);
+    }
+
+    if (quads.length) {
+        const kicker = Math.max(...[...trips, ...pairs, ...singles], 0);
+        return encode(HandCategory.FourOfAKind, [quads[0], kicker]);
+    }
+    if (trips.length && (trips.length >= 2 || pairs.length)) {
+        return encode(HandCategory.FullHouse, [trips[0], Math.max(trips[1] ?? 0, pairs[0] ?? 0)]);
+    }
+    if (flushSuit !== -1) return encode(HandCategory.Flush, topRanks(suitMasks[flushSuit], 5));
+
+    const straightHigh = straightHighFromMask(rankMask);
+    if (straightHigh) return encode(HandCategory.Straight, [straightHigh]);
+
+    if (trips.length) return encode(HandCategory.ThreeOfAKind, [trips[0], ...singles.slice(0, 2)]);
+    if (pairs.length >= 2) {
+        const kicker = Math.max(pairs[2] ?? 0, singles[0] ?? 0);
+        return encode(HandCategory.TwoPair, [pairs[0], pairs[1], kicker]);
+    }
+    if (pairs.length) return encode(HandCategory.OnePair, [pairs[0], ...singles.slice(0, 3)]);
+    return encode(HandCategory.HighCard, singles.slice(0, 5));
+}
+
+function encode(category: HandCategory, kickers: number[]): number {
+    let score: number = category;
+    for (let i = 0; i < 5; i++) score = score * 16 + (kickers[i] ?? 0);
+    return score;
+}
+
+function straightHighFromMask(mask: number): number {
+    for (let high = 14; high >= 6; high--) {
+        const run = 0b11111 << (high - 4);
+        if ((mask & run) === run) return high;
+    }
+    // A-2-3-4-5
+    const wheel = (1 << 14) | 0b111100;
+    return (mask & wheel) === wheel ? 5 : 0;
+}
+
+function topRanks(mask: number, count: number): number[] {
+    const result: number[] = [];
+    for (let v = 14; v >= 2 && result.length < count; v--) if (mask & (1 << v)) result.push(v);
+    return result;
+}
+
 /** 傳入 5 個由大到小、互不相同的點數；是順子則回傳最大牌，否則回傳 0。A-2-3-4-5（wheel）的最大牌為 5 */
 function straightHighCard(valuesDesc: number[]): number {
     if (valuesDesc[0] - valuesDesc[4] === 4) return valuesDesc[0];

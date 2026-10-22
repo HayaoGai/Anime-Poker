@@ -1,7 +1,8 @@
 import { FULL_DECK, type Card } from '@shared/cards';
 import { BIG_BLIND, SMALL_BLIND } from '@shared/rules';
 import { Deck } from '../src/engine/Deck';
-import { HandController, type HandEvent, type HandSeat } from '../src/engine/HandController';
+import type { HandEvent } from '@shared/events';
+import { HandController, type HandSeat } from '../src/engine/HandController';
 import { seatsAfter } from '../src/engine/positions';
 import type { Rng } from '../src/engine/rng';
 

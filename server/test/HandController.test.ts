@@ -1,8 +1,10 @@
-import { ActionKind, ActionType, ErrorCode, HandCategory, Street, type PlayerAction } from '@shared/poker';
+import { ErrorCode } from '@shared/errors';
+import { ActionKind, ActionType, HandCategory, Street, type PlayerAction } from '@shared/poker';
 import { BIG_BLIND, SMALL_BLIND } from '@shared/rules';
 import { describe, expect, it } from 'vitest';
 import { Deck, fisherYates } from '../src/engine/Deck';
-import { HandController, type HandEvent } from '../src/engine/HandController';
+import type { HandEvent } from '@shared/events';
+import { HandController } from '../src/engine/HandController';
 import { createHand, eventsOfType, seededRng, stackOf } from './helpers';
 
 const fold: PlayerAction = { type: ActionType.Fold };

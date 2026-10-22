@@ -1,6 +1,8 @@
 import type { Card } from '@shared/cards';
-import { ActionKind, ActionType, ErrorCode, Street, type HandCategory, type PlayerAction } from '@shared/poker';
-import { BettingRound, type ActionRecord, type HandPlayer, type LegalActions } from './BettingRound';
+import type { HandEvent, LegalActions, ShowdownResult } from '@shared/events';
+import { ErrorCode } from '@shared/errors';
+import { ActionKind, ActionType, Street, type HandCategory, type PlayerAction } from '@shared/poker';
+import { BettingRound, type HandPlayer } from './BettingRound';
 import { Deck } from './Deck';
 import { evaluateBest, type HandValue } from './HandEvaluator';
 import { blindSeats, seatsAfter } from './positions';
@@ -19,37 +21,6 @@ export interface HandOptions {
     bigBlind: number;
     deck: Deck;
 }
-
-export interface RevealedHand {
-    seat: number;
-    cards: Card[];
-}
-
-export interface ShowdownResult {
-    seat: number;
-    category: HandCategory;
-    bestFive: Card[];
-}
-
-/**
- * 一手牌中依序發生的事件。房間依此安排動畫節奏，並決定每個事件要廣播或私訊。
- * 底牌內容不在事件中，由房間另外透過 holeCards() 私訊給本人。
- */
-export type HandEvent =
-    | { type: 'handStarted'; button: number; smallBlindSeat: number; bigBlindSeat: number }
-    | { type: 'blindPosted'; seat: number; blind: 'small' | 'big'; amount: number; allIn: boolean }
-    /** 發底牌，order 為發牌順序（每人兩張，繞兩圈） */
-    | { type: 'holeCardsDealt'; order: number[] }
-    | { type: 'actionRequired'; seat: number; street: Street }
-    | ({ type: 'playerActed'; street: Street } & ActionRecord)
-    | { type: 'uncalledReturned'; seat: number; amount: number }
-    /** 本輪下注收進底池；pots 為收完後各池金額（主池在前） */
-    | { type: 'betsCollected'; street: Street; pots: number[] }
-    | { type: 'boardDealt'; street: Street; cards: Card[] }
-    /** 攤牌或 all-in 後再無下注時，公開仍在牌局中的玩家底牌 */
-    | { type: 'handsRevealed'; hands: RevealedHand[] }
-    | { type: 'potAwarded'; potIndex: number; amount: number; winners: { seat: number; amount: number }[]; category: HandCategory | null }
-    | { type: 'handEnded'; showdown: ShowdownResult[] };
 
 export type HandResult = { ok: true; events: HandEvent[] } | { ok: false; error: ErrorCode };
 
