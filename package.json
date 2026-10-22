@@ -14,6 +14,8 @@
     "typecheck": "pnpm -F @anime-poker/server typecheck",
     "wrangler": "pnpm -F @anime-poker/tools exec wrangler",
     "sync:shared": "node tools/sync-shared.mjs",
+    "gen:art": "node tools/gen-art/index.mjs",
+    "gen:sfx": "node tools/gen-sfx/index.mjs",
     "deploy:web": "node tools/deploy-web.mjs",
     "release:apk": "node tools/release-apk.mjs"
   }
