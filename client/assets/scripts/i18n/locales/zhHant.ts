@@ -74,6 +74,7 @@ export const zhHant = {
     'table.youWin': '恭喜你獲得最後勝利！',
     'table.share': '分享戰績',
     'table.shareText': '我在 Anime Poker 贏得了勝利！',
+    'table.shareFailed': '截圖分享失敗',
 
     'action.fold': '棄牌',
     'action.check': '過牌',

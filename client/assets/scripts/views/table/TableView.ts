@@ -1,8 +1,9 @@
-import { _decorator, Button, director, Label, Node, ParticleSystem2D, Prefab, resources, SpriteFrame, Vec3 } from 'cc';
+import { _decorator, Button, Canvas, Color, director, Graphics, Label, Node, ParticleSystem2D, Prefab, resources, SpriteFrame, tween, UIOpacity, UITransform, Vec3 } from 'cc';
 import { audio, voiceActionFor } from '../../core/AudioManager';
 import { backKey } from '../../core/BackKey';
 import { eventBus } from '../../core/EventBus';
 import { popups } from '../../core/PopupManager';
+import { captureToPng } from '../../core/ScreenCapture';
 import { toast } from '../../core/Toast';
 import { ViewBase } from '../../core/ViewBase';
 import { i18n, t, type I18nKey } from '../../i18n/I18n';
@@ -120,6 +121,7 @@ export class TableView extends ViewBase {
     private lastCountdownSecond = -1;
     private ready = false;
     private leavingScene = false;
+    private sharing = false;
 
     protected onLoad(): void {
         // 直接從 Table 場景開始預覽時沒有連線：回到 Lobby
@@ -127,7 +129,8 @@ export class TableView extends ViewBase {
             this.scheduleOnce(() => director.loadScene('Lobby'), 0);
             return;
         }
-        toast.register(this.toastPrefab);
+        // 牌桌頂部中央有時間與電量 HUD，提示往下移
+        toast.register(this.toastPrefab, 420);
         if (this.effects && this.cardTemplate) this.cardFlyer = new Flyer(this.effects, this.cardTemplate);
         if (this.effects && this.chipTemplate) this.chipFlyer = new Flyer(this.effects, this.chipTemplate);
 
@@ -494,8 +497,44 @@ export class TableView extends ViewBase {
         if (ok) this.vm?.standUp();
     }
 
-    /** 分享戰績（第 10 項加入截圖） */
-    protected async share(): Promise<void> {}
+    /** 分享戰績：截圖（不含分享按鈕）→ 快門閃光 → 交給平台分享（Android 分享選單／Web Share／下載） */
+    private async share(): Promise<void> {
+        const camera = director.getScene()?.getComponentInChildren(Canvas)?.cameraComponent;
+        if (this.sharing || !camera) return;
+        this.sharing = true;
+        const button = this.winBanner?.shareButton?.node;
+        if (button) button.active = false;
+        try {
+            const png = await captureToPng(camera);
+            this.cameraFlash();
+            void audio.playSfx('card_flip');
+            await nativeBridge.shareImage(png, t('table.shareText'));
+        } catch (err) {
+            console.warn('[Table] 分享失敗', err);
+            toast.show(t('table.shareFailed'));
+        } finally {
+            if (button?.isValid) button.active = true;
+            this.sharing = false;
+        }
+    }
+
+    /** 全畫面白光淡出，讓截圖有拍照的回饋 */
+    private cameraFlash(): void {
+        const canvas = director.getScene()?.getComponentInChildren(Canvas)?.node;
+        const size = canvas?.getComponent(UITransform)?.contentSize;
+        if (!canvas || !size) return;
+        const flash = new Node('CameraFlash');
+        flash.layer = canvas.layer;
+        canvas.addChild(flash);
+        flash.addComponent(UITransform).setContentSize(size);
+        const g = flash.addComponent(Graphics);
+        g.fillColor = Color.WHITE;
+        g.rect(-size.width, -size.height, size.width * 2, size.height * 2);
+        g.fill();
+        const opacity = flash.addComponent(UIOpacity);
+        opacity.opacity = 220;
+        tween(opacity).to(0.35, { opacity: 0 }, { easing: 'quadOut' }).call(() => flash.destroy()).start();
+    }
 
     private backToLobby(): void {
         if (this.leavingScene) return;

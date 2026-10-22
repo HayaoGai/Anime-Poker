@@ -56,7 +56,8 @@ export const DEFAULT_PACING: Pacing = {
     potAwarded: 1800,
     handEnded: 2000,
     nextHand: 1000,
-    gameOver: 4000,
+    // 勝利橫幅停留的時間（含分享戰績），之後回到房間大廳
+    gameOver: 6000,
 };
 
 export interface TableOptions {

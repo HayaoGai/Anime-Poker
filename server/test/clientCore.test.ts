@@ -1,5 +1,7 @@
+import { crc32, inflateSync } from 'node:zlib';
 import { describe, expect, it, vi } from 'vitest';
 import { computed, Observable } from '../../client/assets/scripts/core/Observable';
+import { encodePng } from '../../client/assets/scripts/core/PngEncoder';
 import { DisposeBag } from '../../client/assets/scripts/core/ViewModel';
 import { resolveLanguage } from '../../client/assets/scripts/i18n/language';
 import { hostNickname, mySeatIndex, toTableSnapshot } from '../../client/assets/scripts/models/TableSnapshot';
@@ -141,5 +143,46 @@ describe('TableSnapshot', () => {
         expect(mySeatIndex(snapshot, 'spectator')).toBe(-1);
         expect(mySeatIndex(null, 'me')).toBe(-1);
         expect(hostNickname(snapshot)).toBe('Host');
+    });
+});
+
+describe('encodePng', () => {
+    /** 依序讀出 chunk，並檢查每個 chunk 的 CRC */
+    function readChunks(png: Uint8Array): Map<string, Buffer> {
+        const buf = Buffer.from(png);
+        expect([...buf.subarray(0, 8)]).toEqual([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]);
+        const chunks = new Map<string, Buffer>();
+        for (let pos = 8; pos < buf.length; ) {
+            const length = buf.readUInt32BE(pos);
+            const type = buf.toString('latin1', pos + 4, pos + 8);
+            const data = buf.subarray(pos + 8, pos + 8 + length);
+            expect(buf.readUInt32BE(pos + 8 + length)).toBe(crc32(buf.subarray(pos + 4, pos + 8 + length)));
+            chunks.set(type, data);
+            pos += 12 + length;
+        }
+        return chunks;
+    }
+
+    it('產生合法的 RGB PNG，zlib 可正確解壓出原始像素', () => {
+        // 2×2：紅 綠 / 藍 白（alpha 會被捨棄）
+        const rgba = [255, 0, 0, 255, 0, 255, 0, 128, 0, 0, 255, 255, 255, 255, 255, 0];
+        const chunks = readChunks(encodePng(rgba, 2, 2));
+        const header = chunks.get('IHDR')!;
+        expect([header.readUInt32BE(0), header.readUInt32BE(4), header[8], header[9]]).toEqual([2, 2, 8, 2]);
+        expect(chunks.has('IEND')).toBe(true);
+        expect([...inflateSync(chunks.get('IDAT')!)]).toEqual([0, 255, 0, 0, 0, 255, 0, 0, 0, 0, 255, 255, 255, 255]);
+    });
+
+    it('flipY 反轉列順序；超過 64 KB 的資料分成多個 stored block', () => {
+        const width = 200;
+        const height = 120;
+        const rgba = new Uint8Array(width * height * 4);
+        for (let y = 0; y < height; y++) rgba.fill(y, y * width * 4, (y + 1) * width * 4);
+        const raw = inflateSync(readChunks(encodePng(rgba, width, height, { flipY: true })).get('IDAT')!);
+        const rowBytes = width * 3 + 1;
+        expect(raw.length).toBe(rowBytes * height);
+        expect(raw.length).toBeGreaterThan(0xffff);
+        expect(raw[1]).toBe(height - 1);
+        expect(raw[(height - 1) * rowBytes + 1]).toBe(0);
     });
 });

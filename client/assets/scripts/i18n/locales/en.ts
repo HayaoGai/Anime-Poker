@@ -72,6 +72,7 @@ export const en: Record<I18nKey, string> = {
     'table.youWin': 'Congratulations, you win!',
     'table.share': 'Share',
     'table.shareText': 'I just won a game of Anime Poker!',
+    'table.shareFailed': "Couldn't share the screenshot",
 
     'action.fold': 'Fold',
     'action.check': 'Check',

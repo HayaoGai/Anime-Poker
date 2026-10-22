@@ -72,6 +72,7 @@ export const zhHans: Record<I18nKey, string> = {
     'table.youWin': '恭喜你获得最后胜利！',
     'table.share': '分享战绩',
     'table.shareText': '我在 Anime Poker 赢得了胜利！',
+    'table.shareFailed': '截图分享失败',
 
     'action.fold': '弃牌',
     'action.check': '过牌',

@@ -3,8 +3,8 @@ import { audio } from './AudioManager';
 
 const SHOW_SECONDS = 2.4;
 const GAP = 96;
-/** 與頂部按鈕列同高，避免蓋住面板標題 */
-const TOP_Y = 440;
+/** 預設與頂部按鈕列同高，避免蓋住面板標題 */
+const DEFAULT_TOP_Y = 440;
 
 /**
  * 畫面上方的短暫提示（房間通知、錯誤訊息）。最新的在最上面，同時最多 3 則。
@@ -12,10 +12,13 @@ const TOP_Y = 440;
  */
 class ToastService {
     private prefab: Prefab | null = null;
+    private topY = DEFAULT_TOP_Y;
     private readonly active: Node[] = [];
 
-    register(prefab: Prefab | null): void {
+    /** @param topY 第一則提示的 y 座標（各場景依頂部 UI 調整） */
+    register(prefab: Prefab | null, topY = DEFAULT_TOP_Y): void {
         if (prefab) this.prefab = prefab;
+        this.topY = topY;
     }
 
     show(text: string): void {
@@ -50,7 +53,7 @@ class ToastService {
     private layout(): void {
         this.active.forEach((node, i) => {
             const base = node.position;
-            tween(node).to(0.18, { position: new Vec3(base.x, TOP_Y - i * GAP, 0) }, { easing: 'quadOut' }).start();
+            tween(node).to(0.18, { position: new Vec3(base.x, this.topY - i * GAP, 0) }, { easing: 'quadOut' }).start();
         });
     }
 }
