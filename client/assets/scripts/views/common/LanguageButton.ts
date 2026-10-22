@@ -18,7 +18,6 @@ export class LanguageButton extends Component {
 
     private open(): void {
         if (!this.menuPrefab) return;
-        void audio.playSfx('ui_click');
         void popups.show(this.menuPrefab);
     }
 }

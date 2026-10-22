@@ -17,6 +17,7 @@
     "sync:vendor": "node tools/sync-vendor.mjs",
     "gen:art": "node tools/gen-art/index.mjs",
     "gen:sfx": "node tools/gen-sfx/index.mjs",
+    "gen:fonts": "python tools/gen-fonts/subset.py",
     "gen:scenes": "node tools/gen-scenes/index.mjs",
     "deploy:web": "node tools/deploy-web.mjs",
     "build:android": "node tools/build-android.mjs",

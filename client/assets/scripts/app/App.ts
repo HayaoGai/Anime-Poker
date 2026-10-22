@@ -3,6 +3,7 @@ import { audio } from '../core/AudioManager';
 import { backKey } from '../core/BackKey';
 import { eventBus } from '../core/EventBus';
 import { i18n } from '../i18n/I18n';
+import { labelFont } from '../i18n/LabelFont';
 import { profile } from '../models/ProfileModel';
 import { nativeBridge } from '../native/NativeBridge';
 
@@ -18,6 +19,7 @@ export function initApp(): void {
 
     profile.load();
     i18n.init();
+    labelFont.init();
     backKey.init();
     nativeBridge.init();
 

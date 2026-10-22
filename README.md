@@ -100,6 +100,7 @@ pnpm typecheck         # 伺服器 + 用戶端型別檢查
 | `pnpm sync:vendor` | 把 Colyseus SDK 的 UMD bundle 複製到 `client/assets/plugins`，並設為 Cocos 插件腳本 |
 | `pnpm gen:art` | 以 SVG 產生牌面、籌碼、圖示、粒子等圖片（resvg 轉成 PNG） |
 | `pnpm gen:sfx` | 以程式合成音效（WAV） |
+| `pnpm gen:fonts <字型資料夾>` | 產生遊戲內文字的字型子集（需要 Python 與 fontTools，來源字型的下載方式見 `tools/gen-fonts/subset.py`） |
 | `pnpm gen:scenes` | 產生場景、Prefab 與 AnimationClip（已存在的檔案不覆寫，加 `--force` 才會覆寫） |
 
 ## 部署
@@ -146,6 +147,7 @@ TypeScript 端統一使用 `INativeBridge` 介面，Web 與 Android 各有一份
 
 - 圖片與音效都由 `tools/` 下的產生器製作，可以重現。
 - 產生圖片時使用的字型為 Fredoka（SIL Open Font License，見 `tools/gen-art/fonts/OFL.txt`）。
+- 遊戲內文字使用 Resource Han Rounded（SIL Open Font License，見 `client/assets/resources/fonts/OFL.txt`）。只收錄常用字與介面文字的子集；簡體中文用 CN 字形，繁體中文與英文用 TW 字形。
 - 人聲與背景音樂已預留位置，放入對應的檔案就會自動播放，缺少的檔案會被略過：
   - 人聲依玩家的頭像播放：`client/assets/resources/audio/voice/<頭像 id>/<check|bet|call|raise|fold|allIn>`
   - 背景音樂：`client/assets/resources/audio/bgm/<room|room_list|table>`
