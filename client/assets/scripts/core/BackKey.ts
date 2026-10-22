@@ -10,6 +10,7 @@ export type BackHandler = () => boolean;
 class BackKeyService {
     private readonly handlers: BackHandler[] = [];
     private initialized = false;
+    private lastTrigger = 0;
 
     init(): void {
         if (this.initialized) return;
@@ -26,8 +27,14 @@ class BackKeyService {
         };
     }
 
-    /** 主動觸發（測試或 UI 上的返回按鈕） */
+    /**
+     * 觸發返回：鍵盤事件、Android 原生的返回事件或 UI 上的返回按鈕。
+     * Android 上原生事件與 Cocos 的 MOBILE_BACK 可能同時送達，短時間內的重複觸發只處理一次。
+     */
     trigger(): void {
+        const now = Date.now();
+        if (now - this.lastTrigger < 300) return;
+        this.lastTrigger = now;
         for (let i = this.handlers.length - 1; i >= 0; i--) {
             if (this.handlers[i]()) return;
         }

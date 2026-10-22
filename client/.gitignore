@@ -23,3 +23,6 @@ node_modules/
 
 # WebStorm
 .idea/
+
+# 原生建置的本機覆寫設定（Cocos 範本註明不納入版控）
+native/engine/common/localCfg.cmake

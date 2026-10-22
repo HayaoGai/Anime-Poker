@@ -52,7 +52,7 @@ if (!apk) {
         .filter((p) => /release/i.test(p) && !/unsigned/i.test(p))
         .sort((a, b) => statSync(b).mtimeMs - statSync(a).mtimeMs);
     apk = candidates[0];
-    if (!apk) fail('在 client/build 下找不到 release APK，請先用 Cocos Creator 建置 Android（release），或以 --apk 指定');
+    if (!apk) fail('在 client/build 下找不到 release APK，請先執行 pnpm build:android，或以 --apk 指定');
 }
 info(`APK：${apk}`);
 

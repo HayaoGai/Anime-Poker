@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- FileProvider 可分享的路徑：Cocos 的 getWritablePath()（App 私有 files 目錄）底下的 share/ -->
+<paths>
+    <files-path name="share" path="share/" />
+</paths>
