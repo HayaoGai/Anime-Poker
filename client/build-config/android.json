@@ -36,15 +36,14 @@
       },
       "apiLevel": 36,
       "appABIs": [
-        "arm64-v8a",
-        "armeabi-v7a"
+        "arm64-v8a"
       ],
       "useDebugKeystore": true,
       "keystorePath": "",
       "keystorePassword": "",
       "keystoreAlias": "",
       "keystoreAliasPassword": "",
-      "isSoFileCompressed": false,
+      "isSoFileCompressed": true,
       "appBundle": false,
       "androidInstant": false,
       "inputSDK": false,
