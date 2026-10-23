@@ -1,4 +1,4 @@
-import { _decorator, Animation, Color, Component, Label, Node, Sprite, SpriteFrame, Tween, tween, UIOpacity, UITransform, Vec3 } from 'cc';
+import { _decorator, Animation, Color, Component, Graphics, Label, Node, Sprite, SpriteFrame, Tween, tween, UIOpacity, UITransform, Vec2, Vec3 } from 'cc';
 import type { I18nKey } from '../../i18n/I18n';
 import { t } from '../../i18n/I18n';
 import { LocalizedLabel } from '../../i18n/LocalizedLabel';
@@ -19,6 +19,55 @@ export interface SeatRenderOptions {
 }
 
 const TIMER_COLORS = [new Color(111, 220, 191), new Color(255, 211, 110), new Color(232, 67, 111)];
+/** 倒數框沿名牌外框描邊：對齊 panel_nameplate 的外框（內縮 2、圓角 22） */
+const TIMER_INSET = 2;
+const TIMER_RADIUS = 22;
+const TIMER_CORNER_STEPS = 8;
+
+/** 圓角矩形外框的折線：自頂部中央起逆時針繞一圈回到頂部中央 */
+function roundRectOutline(width: number, height: number, inset: number, radius: number): Vec2[] {
+    const hw = width / 2 - inset;
+    const hh = height / 2 - inset;
+    const r = Math.min(radius, hw, hh);
+    const corners = [
+        [r - hw, hh - r],
+        [r - hw, r - hh],
+        [hw - r, r - hh],
+        [hw - r, hh - r],
+    ];
+    const points = [new Vec2(0, hh)];
+    corners.forEach(([cx, cy], k) => {
+        for (let i = 0; i <= TIMER_CORNER_STEPS; i++) {
+            const angle = (Math.PI / 2) * (k + 1 + i / TIMER_CORNER_STEPS);
+            points.push(new Vec2(cx + Math.cos(angle) * r, cy + Math.sin(angle) * r));
+        }
+    });
+    points.push(new Vec2(0, hh));
+    return points;
+}
+
+/** 沿折線描出前 fraction 比例的長度 */
+function strokePartial(g: Graphics, points: Vec2[], fraction: number): void {
+    g.clear();
+    let total = 0;
+    for (let i = 1; i < points.length; i++) total += Vec2.distance(points[i - 1], points[i]);
+    let left = total * fraction;
+    if (left <= 0) return;
+    g.moveTo(points[0].x, points[0].y);
+    for (let i = 1; i < points.length; i++) {
+        const a = points[i - 1];
+        const b = points[i];
+        const d = Vec2.distance(a, b);
+        if (d >= left) {
+            const k = left / d;
+            g.lineTo(a.x + (b.x - a.x) * k, a.y + (b.y - a.y) * k);
+            break;
+        }
+        g.lineTo(b.x, b.y);
+        left -= d;
+    }
+    g.stroke();
+}
 
 /** 牌桌上的一個座位 */
 @ccclass('SeatView')
@@ -39,8 +88,8 @@ export class SeatView extends Component {
     @property(Label)
     stack: Label | null = null;
 
-    @property({ type: Sprite, tooltip: '倒數環（FILLED / RADIAL）' })
-    timerRing: Sprite | null = null;
+    @property({ type: Graphics, tooltip: '倒數框：沿名牌外框描邊，大小取自節點的 UITransform' })
+    timerRing: Graphics | null = null;
 
     @property({ type: Animation, tooltip: '輪到此座位時播放 turn_pulse' })
     turnGlow: Animation | null = null;
@@ -89,6 +138,10 @@ export class SeatView extends Component {
 
     /** 底牌目前顯示的內容，用來判斷是否需要翻牌動畫 */
     private shownCards: (Card | null)[] | null = null;
+
+    /** 倒數框折線，節點大小改變時重算 */
+    private timerOutline: Vec2[] | null = null;
+    private timerOutlineSize = { width: 0, height: 0 };
 
     protected onLoad(): void {
         if (this.bubble) this.bubble.active = false;
@@ -167,7 +220,7 @@ export class SeatView extends Component {
         );
     }
 
-    /** 倒數環：fraction 為剩餘比例（1 → 0），null 隱藏 */
+    /** 倒數框：fraction 為剩餘比例（1 → 0），null 隱藏 */
     setTimer(fraction: number | null): void {
         const ring = this.timerRing;
         if (!ring) return;
@@ -181,13 +234,18 @@ export class SeatView extends Component {
             }
         }
         if (fraction === null) return;
-        ring.fillRange = fraction;
         // 綠 → 黃 → 紅
         const f = 1 - fraction;
         const [a, b, k] = f < 0.5 ? [TIMER_COLORS[0], TIMER_COLORS[1], f * 2] : [TIMER_COLORS[1], TIMER_COLORS[2], (f - 0.5) * 2];
         const color = new Color();
         Color.lerp(color, a, b, k);
-        ring.color = color;
+        ring.strokeColor = color;
+        const size = ring.node.getComponent(UITransform)!.contentSize;
+        if (!this.timerOutline || this.timerOutlineSize.width !== size.width || this.timerOutlineSize.height !== size.height) {
+            this.timerOutline = roundRectOutline(size.width, size.height, TIMER_INSET, TIMER_RADIUS);
+            this.timerOutlineSize = { width: size.width, height: size.height };
+        }
+        strokePartial(ring, this.timerOutline, Math.min(Math.max(fraction, 0), 1));
     }
 
     /** 行動氣泡（過牌、跟注…），1.4 秒後淡出 */

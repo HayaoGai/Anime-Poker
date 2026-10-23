@@ -85,9 +85,7 @@ const ITEMS = {
     panel_input: () => svg(80, 64, `<rect x="3" y="3" width="74" height="58" rx="20" fill="#ffffff" stroke="${C.lavender}" stroke-width="4"/>`),
 
     // ---- 牌桌 ----
-    // 倒數環：白色，Cocos 以 Sprite FILLED（RADIAL）顯示進度並依剩餘時間著色
-    timer_ring: () => svg(160, 160, `<circle cx="80" cy="80" r="70" fill="none" stroke="#ffffff" stroke-width="12"/>`),
-    timer_ring_bg: () => svg(160, 160, `<circle cx="80" cy="80" r="70" fill="none" stroke="#000000" stroke-opacity="0.35" stroke-width="12"/>`),
+    // 倒數框改由 SeatView 以 Graphics 沿名牌外框描邊，不需要貼圖
     avatar_frame: () => {
         const defs = linear('ring', [[0, C.pink], [1, C.lavender]], { x1: 0, y1: 0, x2: 1, y2: 1 });
         return svg(
