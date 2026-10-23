@@ -68,4 +68,30 @@ describe('installWebPolyfills', () => {
         expect(installWebPolyfills(browser)).toEqual([]);
         expect(browser.URL).toBe(URL);
     });
+
+    it('取代不會解析網址的假 URL（Cocos 原生 jsb-adapter 的 Blob polyfill）', () => {
+        // 與 jsb-adapter 相同：回傳模擬的 <a> 元素，沒有 protocol 等欄位
+        const FakeURL = function (uri: string) {
+            const anchor: Record<string, unknown> = { href: uri };
+            if (!('origin' in anchor)) (anchor.protocol as string).toLowerCase();
+            return anchor;
+        };
+        const cocosNative: Record<string, unknown> = { URL: FakeURL, Headers };
+        expect(installWebPolyfills(cocosNative)).toEqual(['URL', 'URLSearchParams']);
+        expect(cocosNative.URL).toBe(MiniURL);
+    });
+
+    it('讓唯讀的 XMLHttpRequest.withCredentials 可以設定（Cocos 原生只有 getter）', () => {
+        class NativeXHR {
+            get withCredentials() {
+                return false;
+            }
+        }
+        const cocosNative: Record<string, unknown> = { URL, URLSearchParams, Headers, XMLHttpRequest: NativeXHR };
+        const xhr = new NativeXHR() as { withCredentials: boolean };
+        expect(() => (xhr.withCredentials = true)).toThrow(TypeError);
+        expect(installWebPolyfills(cocosNative)).toEqual(['XMLHttpRequest.withCredentials']);
+        expect(() => (xhr.withCredentials = true)).not.toThrow();
+        expect(installWebPolyfills(cocosNative)).toEqual([]);
+    });
 });

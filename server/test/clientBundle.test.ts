@@ -9,8 +9,8 @@ import { createServer } from '../src/app';
 
 /**
  * 以客戶端實際載入的 SDK 打包檔（client/assets/plugins/colyseus.js）連線，
- * 在沒有 fetch / URL / URLSearchParams / Headers、只有 XMLHttpRequest 的沙箱中執行，
- * 模擬 Cocos 原生環境：SDK 會走 XHR 備援路徑，缺少的 API 由客戶端的 polyfill 補上。
+ * 在沒有 fetch / URLSearchParams / Headers、只有 XMLHttpRequest 與假 URL 的沙箱中執行，
+ * 模擬 Cocos 原生環境：SDK 會走 XHR 備援路徑，缺少或不能用的 API 由客戶端的 polyfill 補上。
  */
 const PORT = 26_000 + Math.floor(performance.now() % 1000);
 let server: Server;
@@ -30,7 +30,6 @@ class TestXMLHttpRequest {
     statusText = '';
     response: unknown = null;
     responseText = '';
-    withCredentials = false;
     onload: (() => void) | null = null;
     onerror: (() => void) | null = null;
     ontimeout: (() => void) | null = null;
@@ -66,6 +65,13 @@ class TestXMLHttpRequest {
     }
 }
 
+/** Cocos 原生 jsb-adapter 的 Blob polyfill 放到全域的 URL：模擬 <a> 元素，不會解析網址 */
+function CocosFakeURL(uri: string) {
+    const anchor: Record<string, unknown> = { href: uri };
+    if (!('origin' in anchor)) (anchor.protocol as string).toLowerCase();
+    return anchor;
+}
+
 function loadBundleLikeCocosNative() {
     const sandbox: Record<string, unknown> = {
         console,
@@ -74,15 +80,22 @@ function loadBundleLikeCocosNative() {
         setInterval,
         clearInterval,
         WebSocket,
-        XMLHttpRequest: TestXMLHttpRequest,
+        // 每次載入用新的類別，因為 polyfill 會修補 prototype 上的 withCredentials
+        XMLHttpRequest: class extends TestXMLHttpRequest {
+            /** 與 Cocos 原生相同：只有 getter，嚴格模式下設定會拋錯 */
+            get withCredentials() {
+                return false;
+            }
+        },
         performance,
         TextEncoder,
         TextDecoder,
+        URL: CocosFakeURL,
     };
     vm.createContext(sandbox);
-    for (const api of ['fetch', 'URL', 'URLSearchParams', 'Headers']) expect(vm.runInContext(`typeof ${api}`, sandbox)).toBe('undefined');
+    for (const api of ['fetch', 'URLSearchParams', 'Headers']) expect(vm.runInContext(`typeof ${api}`, sandbox)).toBe('undefined');
 
-    expect(installWebPolyfills(sandbox)).toEqual(['URL', 'URLSearchParams', 'Headers']);
+    expect(installWebPolyfills(sandbox)).toEqual(['URL', 'URLSearchParams', 'Headers', 'XMLHttpRequest.withCredentials']);
     vm.runInContext(readFileSync(new URL('../../client/assets/plugins/colyseus.js', import.meta.url), 'utf8'), sandbox);
     return sandbox as { Colyseus: any; URL: unknown; Headers: unknown };
 }
