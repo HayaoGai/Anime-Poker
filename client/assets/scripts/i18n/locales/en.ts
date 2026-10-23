@@ -73,6 +73,9 @@ export const en: Record<I18nKey, string> = {
     'table.share': 'Share',
     'table.shareText': 'I just won a game of Anime Poker!',
     'table.shareFailed': "Couldn't share the screenshot",
+    'table.gameEnded': 'Game over',
+    'table.backToLobby': 'Back to Lobby',
+    'table.handHint': 'Your hand: {hand}',
 
     'action.fold': 'Fold',
     'action.check': 'Check',

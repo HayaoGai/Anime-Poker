@@ -41,7 +41,7 @@ export interface Scheduler {
 }
 
 /** 每種事件播放後，等待多久再處理下一個事件（給客戶端播動畫的時間） */
-export type Pacing = Record<HandEventType, number> & { nextHand: number; gameOver: number };
+export type Pacing = Record<HandEventType, number> & { nextHand: number };
 
 export const DEFAULT_PACING: Pacing = {
     handStarted: 500,
@@ -56,8 +56,6 @@ export const DEFAULT_PACING: Pacing = {
     potAwarded: 1800,
     handEnded: 2000,
     nextHand: 1000,
-    // 勝利橫幅停留的時間（含分享戰績），之後回到房間大廳
-    gameOver: 6000,
 };
 
 export interface TableOptions<S extends TableState = TableState> {
@@ -386,12 +384,15 @@ export class Table<S extends TableState = TableState> {
         return [...this.members.values()].filter((m) => m.seat !== null).sort((a, b) => a.order - b.order);
     }
 
-    /** 參賽者變動後：轉移房主、檢查是否解散、更新列表 */
+    /** 參賽者變動後：轉移房主、檢查是否解散或比賽結束、更新列表 */
     private afterParticipantChange(): void {
         if (this.disposed) return;
         const participants = this.humanParticipants;
         if (participants.length === 0) {
-            this.dissolve();
+            // 房間大廳：直接解散。比賽中：比賽結束，這手牌還在進行時等這手結束（finishHand）
+            if (this.state.phase === RoomPhase.Lobby) this.dissolve();
+            else if (!this.hand) this.endGame();
+            else this.refreshListing();
             return;
         }
 
@@ -670,55 +671,50 @@ export class Table<S extends TableState = TableState> {
         for (const seat of this.vacateAfterHand) this.clearSeat(seat);
         this.vacateAfterHand.clear();
 
+        const eliminated: Member[] = [];
         for (const [seat, s] of this.state.seats.entries()) {
             s.inHand = false;
             if (!s.occupied || s.stack > 0) continue;
             if (s.isBot) {
                 this.output.broadcast(ServerMessage.Notice, { code: NoticeCode.BotBusted, nickname: s.nickname });
-                this.clearSeat(seat);
             } else {
                 const member = this.members.get(s.sessionId);
                 if (member) {
                     member.seat = null;
-                    this.output.send(member.sessionId, ServerMessage.Notice, { code: NoticeCode.Eliminated });
+                    eliminated.push(member);
                 }
-                this.clearSeat(seat);
             }
+            this.clearSeat(seat);
         }
 
-        this.afterParticipantChange();
-        if (this.disposed) return;
-
+        // 只剩一位參賽者有籌碼，或真人參賽者都沒有籌碼了（或都已離座）：比賽結束
         const withChips = this.state.seats.filter((s) => s.occupied && s.stack > 0);
-        if (withChips.length < 2) {
+        if (withChips.length < 2 || this.humanParticipants.length === 0) {
             this.endGame();
             return;
         }
+
+        for (const member of eliminated) this.output.send(member.sessionId, ServerMessage.Notice, { code: NoticeCode.Eliminated });
+        this.afterParticipantChange();
         this.stageTimer = this.scheduler.setTimeout(() => this.startHand(), this.pacing.nextHand);
     }
 
+    /**
+     * 比賽結束即解散房間。不送解散通知，也不把任何人送回房間列表：
+     * 客戶端停在牌桌畫面顯示結果，由玩家（含觀戰者）自行決定何時離開，贏家可以慢慢分享戰績。
+     */
     private endGame(): void {
         this.hand = null;
-        const winnerSeat = this.state.seats.findIndex((s) => s.occupied && s.stack > 0);
+        // 只剩一位有籌碼時才有贏家；真人參賽者都輸光而電腦還有多位時沒有贏家
+        // Schema 的 ArraySchema 不支援 flatMap
+        const withChips = this.state.seats.map((s, seat) => (s.occupied && s.stack > 0 ? seat : -1)).filter((seat) => seat >= 0);
+        const winnerSeat = withChips.length === 1 ? withChips[0] : -1;
         this.output.broadcast(ServerMessage.GameOver, {
             winnerSeat,
             nickname: winnerSeat >= 0 ? this.state.seats[winnerSeat].nickname : '',
         });
-
-        this.stageTimer = this.scheduler.setTimeout(() => {
-            this.stageTimer = null;
-            this.state.phase = RoomPhase.Lobby;
-            this.state.street = '';
-            this.state.buttonSeat = this.state.smallBlindSeat = this.state.bigBlindSeat = -1;
-            this.state.board.clear();
-            this.state.pots.clear();
-            for (const s of this.state.seats) {
-                s.inHand = s.folded = s.allIn = false;
-                s.bet = 0;
-                s.shownCards.clear();
-            }
-            this.refreshListing();
-        }, this.pacing.gameOver);
+        this.dispose();
+        this.output.dissolve();
     }
 }
 

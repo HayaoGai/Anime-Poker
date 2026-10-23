@@ -1,9 +1,12 @@
-import { _decorator, Component, Node, Sprite, Tween, tween, Vec3 } from 'cc';
+import { _decorator, Color, Component, Node, Sprite, Tween, tween, Vec3 } from 'cc';
 import { audio } from '../../core/AudioManager';
 import type { Card } from '../../shared/cards';
 import { cardFrames } from './CardFrames';
 
 const { ccclass, property, menu, requireComponent } = _decorator;
+
+/** 攤牌時不屬於贏家牌型的牌變暗 */
+const DIMMED_COLOR = new Color(120, 120, 130, 255);
 
 /** 一張牌：顯示牌背或牌面，翻牌動畫為 scaleX 1 → 0（換圖）→ 1 */
 @ccclass('CardView')
@@ -60,6 +63,16 @@ export class CardView extends Component {
 
     setHighlight(on: boolean): void {
         if (this.highlight) this.highlight.active = on;
+    }
+
+    setDimmed(on: boolean): void {
+        this.getComponent(Sprite)!.color = on ? DIMMED_COLOR : Color.WHITE;
+    }
+
+    /** 清除標亮與變暗 */
+    clearEmphasis(): void {
+        this.setHighlight(false);
+        this.setDimmed(false);
     }
 
     private applyFrame(): void {

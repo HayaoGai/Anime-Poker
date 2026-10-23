@@ -76,7 +76,10 @@ export const ServerMessage = {
     Notice: 'notice',
     /** 私訊：回應時間校正 */
     TimeSync: 'timeSync',
-    /** 廣播：比賽結束，只剩一位參賽者有籌碼 */
+    /**
+     * 廣播：比賽結束（只剩一位參賽者有籌碼，或真人參賽者都已輸光或離座），房間隨即解散。
+     * 客戶端收到後自行離開房間，但留在牌桌畫面，由玩家決定何時返回。
+     */
     GameOver: 'gameOver',
 } as const;
 export type ServerMessage = (typeof ServerMessage)[keyof typeof ServerMessage];
@@ -93,7 +96,7 @@ export const NoticeCode = {
     SeatedAsSpectator: 'SEATED_AS_SPECTATOR',
     /** 私訊：遊戲進行中坐下，下一手開始參賽 */
     WaitingNextHand: 'WAITING_NEXT_HAND',
-    /** 牌桌上已沒有真人參賽者，房間解散 */
+    /** 房間大廳中已沒有真人參賽者，房間解散（比賽中則改為比賽結束，見 GameOver） */
     RoomDissolved: 'ROOM_DISSOLVED',
 } as const;
 export type NoticeCode = (typeof NoticeCode)[keyof typeof NoticeCode];
@@ -107,6 +110,7 @@ export interface ServerPayloads {
     [ServerMessage.Error]: { code: ErrorCode };
     [ServerMessage.Notice]: { code: NoticeCode; nickname?: string };
     [ServerMessage.TimeSync]: { clientTime: number; serverTime: number };
+    /** 沒有唯一贏家時 winnerSeat 為 -1、nickname 為空字串 */
     [ServerMessage.GameOver]: { winnerSeat: number; nickname: string };
 }
 

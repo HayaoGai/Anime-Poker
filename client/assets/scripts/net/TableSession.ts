@@ -12,6 +12,8 @@ export interface TableSession {
     readonly connection: Observable<ConnectionState>;
     readonly timeSync: TimeSync;
     readonly sessionId: string;
+    /** 離線模式（只有自己與電腦） */
+    readonly offline: boolean;
     on<T extends ServerMessage>(type: T, listener: (payload: ServerPayloads[T]) => void): Unsubscribe;
     /** 狀態同步（每次更新後呼叫，訂閱時若已有狀態會立即呼叫一次） */
     onState(listener: (state: unknown) => void): Unsubscribe;

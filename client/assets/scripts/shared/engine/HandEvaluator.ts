@@ -22,6 +22,29 @@ export function evaluateBest(cards: readonly Card[]): HandValue {
     return best!;
 }
 
+/** 目前湊成的牌型；不足 5 張也可以（例如翻牌前只有兩張底牌時為一對或高牌） */
+export function categoryOf(cards: readonly Card[]): HandCategory {
+    return Math.floor(scoreHand(cards) / 16 ** 5) as HandCategory;
+}
+
+/** 構成牌型本身的張數，其餘為 kicker */
+const MADE_COUNT: Record<HandCategory, number> = {
+    [HandCategory.HighCard]: 1,
+    [HandCategory.OnePair]: 2,
+    [HandCategory.TwoPair]: 4,
+    [HandCategory.ThreeOfAKind]: 3,
+    [HandCategory.Straight]: 5,
+    [HandCategory.Flush]: 5,
+    [HandCategory.FullHouse]: 5,
+    [HandCategory.FourOfAKind]: 4,
+    [HandCategory.StraightFlush]: 5,
+};
+
+/** 最佳 5 張中構成牌型的牌（例如一對只有那兩張），不含 kicker */
+export function madeCards(value: Pick<HandValue, 'category' | 'bestFive'>): Card[] {
+    return value.bestFive.slice(0, MADE_COUNT[value.category]);
+}
+
 /** 評估剛好 5 張牌 */
 export function evaluateFive(cards: readonly Card[]): HandValue {
     // 依「同點數張數多 → 點數大」排序，排序結果同時就是比較 kicker 的順序

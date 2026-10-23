@@ -129,4 +129,21 @@ describe('LocalTableSession', () => {
         expect(session.connection.value).toBe('closed');
         expect(vi.getTimerCount()).toBe(0);
     });
+
+    it('比賽中改為觀戰：這手打完後先送達比賽結束，再關閉連線，不送解散通知', async () => {
+        const { session } = start();
+        const received: string[] = [];
+        session.on(ServerMessage.Notice, ({ code }) => received.push(code));
+        session.on(ServerMessage.GameOver, () => received.push('gameOver'));
+        settle();
+        session.send(ClientMessage.StartGame, {});
+        vi.advanceTimersByTime(3000);
+        session.send(ClientMessage.StandUp, {});
+
+        for (let i = 0; i < 600 && session.connection.value !== 'closed'; i++) await vi.advanceTimersByTimeAsync(500);
+        expect(session.connection.value).toBe('closed');
+        expect(received).toContain('gameOver');
+        expect(received).not.toContain(NoticeCode.RoomDissolved);
+        expect(vi.getTimerCount()).toBe(0);
+    });
 });

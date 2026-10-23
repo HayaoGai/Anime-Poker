@@ -32,6 +32,8 @@ export class TableViewModel extends ViewModel {
     readonly legal = new Observable<LegalActions | null>(null);
     readonly deadline = new Observable(0);
     readonly connection = tableStore.session!.connection;
+    /** 離線模式：只有自己與電腦，不提供改為觀戰 */
+    readonly offline = tableStore.session!.offline;
 
     private handNumber = 0;
     private readonly session = tableStore.session!;

@@ -2,7 +2,7 @@ import { HandCategory } from '@shared/poker';
 import { describe, expect, it } from 'vitest';
 import { FULL_DECK, type Card } from '@shared/cards';
 import { fisherYates } from '@shared/engine/Deck';
-import { evaluateBest, evaluateFive, scoreHand } from '@shared/engine/HandEvaluator';
+import { categoryOf as currentCategory, evaluateBest, evaluateFive, madeCards, scoreHand } from '@shared/engine/HandEvaluator';
 import { seededRng } from './helpers';
 
 const hand = (text: string) => text.split(' ') as Card[];
@@ -118,5 +118,37 @@ describe('scoreHand（快速計分）', () => {
         ]) {
             expect(scoreHand(hand(text))).toBe(evaluateBest(hand(text)).score);
         }
+    });
+});
+
+describe('提示與標亮用的輔助函式', () => {
+    it.each([
+        ['As Ad', HandCategory.OnePair],
+        ['As Kd', HandCategory.HighCard],
+        ['As Ad Ah', HandCategory.ThreeOfAKind],
+        ['As Kd 5s 5d', HandCategory.OnePair],
+        ['As Kd Qh Jc Ts 2d', HandCategory.Straight],
+        ['As Ks 7s 4s 2s 2d Kh', HandCategory.Flush],
+    ])('categoryOf(%s)', (cards, expected) => {
+        expect(currentCategory(hand(cards))).toBe(expected);
+    });
+
+    it('categoryOf 與 evaluateBest 一致', () => {
+        const rng = seededRng(7);
+        for (let i = 0; i < 500; i++) {
+            const cards = fisherYates([...FULL_DECK], rng).slice(0, 5 + (i % 3));
+            expect(currentCategory(cards)).toBe(evaluateBest(cards).category);
+        }
+    });
+
+    it.each([
+        ['Qs Qh 9d 5c 2s Ah 3c', ['Qs', 'Qh']],
+        ['Js Jh 4d 4c As 2h 3c', ['Js', 'Jh', '4d', '4c']],
+        ['7s 7h 7d Kc 2s 9h 3c', ['7s', '7h', '7d']],
+        ['9s 9h 9d 9c 2s Kh 3c', ['9s', '9h', '9d', '9c']],
+        ['As Jh 9d 5c 3s 2h 7c', ['As']],
+        ['Ts 9h 8d 7c 6s 2h 2c', ['Ts', '9h', '8d', '7c', '6s']],
+    ])('madeCards(%s) 只含構成牌型的牌', (cards, expected) => {
+        expect(madeCards(evaluateBest(hand(cards))).sort()).toEqual([...expected].sort());
     });
 });

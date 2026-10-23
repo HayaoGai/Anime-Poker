@@ -12,6 +12,7 @@ import type { TableSnapshot } from '../../models/TableSnapshot';
 import { tableStore } from '../../models/TableStore';
 import { nativeBridge } from '../../native/NativeBridge';
 import type { Card } from '../../shared/cards';
+import { categoryOf, evaluateBest, madeCards } from '../../shared/engine/HandEvaluator';
 import { HandCategory } from '../../shared/poker';
 import { RoomPhase } from '../../shared/protocol';
 import { ACTION_TIMEOUT_MS, MAX_SEATS, toBB } from '../../shared/rules';
@@ -42,11 +43,22 @@ function chipsFor(amount: number): number[] {
     return chips.length ? chips : [1];
 }
 
+/** 牌型名稱（2～7 張）；A 高的同花順稱為皇家同花順 */
+function handName(cards: readonly Card[]): string {
+    const category = categoryOf(cards);
+    if (category === HandCategory.StraightFlush) {
+        const best = evaluateBest(cards).bestFive;
+        if (best.some((c) => c[0] === 'A') && best.some((c) => c[0] === 'K')) return t('hand.royal');
+    }
+    return t(`hand.${category}` as I18nKey);
+}
+
 /**
  * Table 場景。畫面以「狀態差異」驅動動畫：
  *   - 座位、籌碼、公共牌等持久狀態以伺服器快照為準（中途加入、斷線重連都能直接正確顯示）
  *   - 快照的變化觸發動畫：下注增加 → 籌碼飛到桌上；下注歸零且底池增加 → 收進底池；公共牌增加 → 發牌並翻牌
  *   - 牌局事件觸發一次性的效果：發底牌、行動氣泡與人聲、攤牌翻牌、贏家高亮與粒子、倒數
+ * 比賽結束時房間隨即解散，畫面停在最後的牌局並顯示結算橫幅，由玩家自行返回大廳。
  */
 @ccclass('TableView')
 @menu('AnimePoker/TableView')
@@ -102,6 +114,9 @@ export class TableView extends ViewBase {
     @property(LocalizedLabel)
     spectatingLabel: LocalizedLabel | null = null;
 
+    @property({ type: Label, tooltip: '自己目前湊成的牌型' })
+    handHint: Label | null = null;
+
     @property(Prefab)
     confirmPopup: Prefab | null = null;
 
@@ -116,12 +131,17 @@ export class TableView extends ViewBase {
     private previous: TableSnapshot | null = null;
     /** 已完成發牌動畫、可顯示底牌的那一手 */
     private dealtHand = -1;
+    /** 發牌動畫進行中的那一手，以及各座位已落地的底牌張數 */
+    private dealingHand = -1;
+    private readonly landedCards = new Map<number, number>();
     /** 公共牌已顯示（含飛行中）的張數 */
     private boardShown = 0;
     private lastCountdownSecond = -1;
     private ready = false;
     private leavingScene = false;
     private sharing = false;
+    /** 比賽已結束、房間已解散：畫面停住，不再因連線關閉而離開 */
+    private gameOver = false;
 
     protected onLoad(): void {
         // 直接從 Table 場景開始預覽時沒有連線：回到 Lobby
@@ -142,7 +162,11 @@ export class TableView extends ViewBase {
         this.spectateButton?.node.on(Button.EventType.CLICK, () => void this.confirmSpectate());
         this.sitButton?.node.on(Button.EventType.CLICK, () => this.vm?.sit());
         this.bindings.add(backKey.push(() => (void this.confirmLeave(), true)));
-        if (this.winBanner) this.winBanner.onShare = () => void this.share();
+        if (this.winBanner) {
+            this.winBanner.onShare = () => void this.share();
+            this.winBanner.onLeave = () => void this.confirmLeave();
+        }
+        if (this.handHint) this.handHint.node.active = false;
 
         nativeBridge.setKeepScreenOn(true);
         void audio.playBgm('table');
@@ -192,18 +216,24 @@ export class TableView extends ViewBase {
 
     private bindViewModel(vm: TableViewModel): void {
         this.bind(vm.snapshot, (snapshot) => this.onSnapshot(snapshot));
-        this.bind(vm.holeCards, () => this.renderSeats(vm.snapshot.value));
-        this.bind(vm.isSpectator, (spectator) => {
-            if (this.spectateButton) this.spectateButton.node.active = !spectator;
-            this.renderSpectator();
+        this.bind(vm.holeCards, () => {
+            this.renderSeats(vm.snapshot.value);
+            this.renderHandHint();
         });
+        this.bind(vm.isSpectator, () => this.renderSpectator());
+        this.bind(i18n.language, () => this.renderHandHint());
         this.bind(vm.connection, (state) => {
-            if (this.reconnecting) this.reconnecting.active = state === 'reconnecting';
-            if (state === 'closed') this.backToLobby();
+            if (this.reconnecting) this.reconnecting.active = state === 'reconnecting' && !this.gameOver;
+            // 比賽結束時房間解散、連線關閉，但留在牌桌畫面
+            if (state === 'closed' && !this.gameOver) this.backToLobby();
         });
         vm.onHandEvent((event) => this.onHandEvent(event));
         vm.onGameOver(({ winnerSeat, nickname }) => {
+            // 連線隨即關閉、快照會被清空，先判斷贏家是不是自己
             const isMe = winnerSeat >= 0 && winnerSeat === vm.mySeat.value;
+            this.gameOver = true;
+            this.renderSpectator();
+            this.renderHandHint();
             void audio.playSfx(isMe ? 'win' : 'lose');
             if (isMe) nativeBridge.vibrate('success');
             this.winBanner?.show(nickname, isMe, true);
@@ -214,7 +244,8 @@ export class TableView extends ViewBase {
     }
 
     private onSnapshot(snapshot: TableSnapshot | null): void {
-        if (!snapshot) return;
+        // 比賽結束後畫面停在最後的牌局
+        if (!snapshot || this.gameOver) return;
         const prev = this.previous;
         this.previous = snapshot;
 
@@ -233,11 +264,7 @@ export class TableView extends ViewBase {
         this.renderBoard(snapshot);
         this.renderPot(snapshot);
         this.renderSpectator();
-
-        // 比賽結束、回到房間大廳
-        if (snapshot.phase === RoomPhase.Lobby && prev?.phase === RoomPhase.Playing) {
-            this.scheduleOnce(() => this.backToLobby(), 1);
-        }
+        this.renderHandHint();
     }
 
     // ---------------------------------------------------------------- 渲染
@@ -258,6 +285,10 @@ export class TableView extends ViewBase {
                 if (seat.shownCards.length) cards = seat.shownCards;
                 else if (index === me && this.vm!.holeCards.value.length) cards = this.vm!.holeCards.value;
                 else if (!seat.folded) cards = [null, null];
+            } else if (seat.occupied && seat.inHand && snapshot.handNumber === this.dealingHand) {
+                // 發牌中：只顯示已落地的牌
+                const landed = this.landedCards.get(index) ?? 0;
+                if (landed) cards = this.dealtCards(index, landed);
             }
             let status: I18nKey | null = null;
             if (seat.occupied && !seat.connected) status = 'table.disconnected';
@@ -278,7 +309,7 @@ export class TableView extends ViewBase {
             this.boardShown = 0;
             for (const card of this.board) {
                 card.node.active = false;
-                card.setHighlight(false);
+                card.clearEmphasis();
             }
         }
         // 新增的公共牌：從牌堆飛到位置後翻開
@@ -290,7 +321,8 @@ export class TableView extends ViewBase {
             card.show(null, false);
             void this.flyCard(this.deck?.worldPosition ?? card.node.worldPosition, card.node.worldPosition, delay, 0.32).then(() => {
                 card.node.active = true;
-                void card.flip(code, 0.26);
+                // 牌翻開後才更新牌型提示，不會先透露牌面
+                void card.flip(code, 0.26).then(() => this.renderHandHint());
             });
         }
         this.boardShown = snapshot.board.length;
@@ -308,11 +340,32 @@ export class TableView extends ViewBase {
     private renderSpectator(): void {
         const vm = this.vm;
         const snapshot = vm?.snapshot.value;
-        if (!vm || !snapshot) return;
+        if (!vm) return;
+        // 離線模式沒有觀戰；比賽結束後只能離開
         const spectator = vm.isSpectator.value;
+        if (this.spectateButton) this.spectateButton.node.active = !spectator && !vm.offline && !this.gameOver;
+        if (!snapshot || this.gameOver) {
+            if (this.sitButton) this.sitButton.node.active = false;
+            return;
+        }
         const freeSeat = snapshot.seats.some((s) => !s.occupied);
         if (this.sitButton) this.sitButton.node.active = spectator && freeSeat;
         if (this.spectatingLabel) this.spectatingLabel.node.active = spectator;
+    }
+
+    /** 自己目前湊成的牌型：底牌加上已翻開的公共牌；棄牌、觀戰或比賽結束時隱藏 */
+    private renderHandHint(): void {
+        const label = this.handHint;
+        const vm = this.vm;
+        if (!label || !vm) return;
+        const snapshot = vm.snapshot.value;
+        const me = snapshot?.seats[vm.mySeat.value];
+        const hole = vm.holeCards.value;
+        const show = !this.gameOver && !!me && me.inHand && !me.folded && snapshot!.handNumber === this.dealtHand && hole.length === 2;
+        label.node.active = show;
+        if (!show) return;
+        const board = this.board.filter((card) => card.node.active && card.isFaceUp && card.code).map((card) => card.code!);
+        label.string = t('table.handHint', { hand: handName([...hole, ...board]) });
     }
 
     // ---------------------------------------------------------------- 狀態差異動畫
@@ -357,6 +410,7 @@ export class TableView extends ViewBase {
             case 'handStarted':
                 this.dealtHand = -1;
                 for (const seat of this.seats) seat.clearHand();
+                this.renderHandHint();
                 void audio.playSfx('card_shuffle');
                 break;
 
@@ -402,19 +456,17 @@ export class TableView extends ViewBase {
                 this.awardPot(event);
                 break;
 
-            case 'handEnded':
-                this.highlightWinningCards(event.showdown);
-                break;
-
             default:
                 break;
         }
     }
 
-    /** 發底牌：從牌堆一次一張繞兩圈，落地後顯示；自己的牌翻成牌面 */
+    /** 發底牌：從牌堆一次一張繞兩圈，每張落地就顯示；自己的牌落地後隨即翻開 */
     private dealHoleCards(order: number[], handNumber: number): void {
         const deck = this.deck?.worldPosition;
         if (!deck) return;
+        this.dealingHand = handNumber;
+        this.landedCards.clear();
         const stagger = Math.min(0.09, 1.0 / (order.length * 2));
         let landed = 0;
         const total = order.length * 2;
@@ -425,32 +477,38 @@ export class TableView extends ViewBase {
                 const delay = (round * order.length + i) * stagger;
                 setTimeout(() => void audio.playSfx('card_deal', 0.7), delay * 1000);
                 void this.flyCard(deck, view.cardWorldPosition(round), delay, 0.28, view.cardScale(this.board[0])).then(() => {
+                    // 這一手已經結束（例如動畫期間收到下一手）時不再顯示
+                    if (this.dealingHand !== handNumber) return;
+                    this.landedCards.set(seat, round + 1);
+                    this.seatView(seat)?.dealCard(round, this.dealtCards(seat, round + 1)[round]);
                     landed++;
                     if (landed === total) {
                         this.dealtHand = handNumber;
                         this.renderSeats(this.vm?.snapshot.value ?? null);
-                        // 自己的底牌：先顯示牌背再翻開
-                        const me = this.vm?.mySeat.value ?? -1;
-                        const cards = this.vm?.holeCards.value ?? [];
-                        if (me >= 0 && cards.length === 2) void this.seatView(me)?.reveal(cards);
+                        this.renderHandHint();
                     }
                 });
             });
         }
     }
 
+    /** 發牌中某座位已落地的牌：自己的牌（已收到底牌時）為牌面，其他人為牌背 */
+    private dealtCards(seat: number, count: number): (Card | null)[] {
+        const hole = this.vm?.holeCards.value ?? [];
+        const mine = seat === this.vm?.mySeat.value && hole.length === 2;
+        return Array.from({ length: count }, (_, i) => (mine ? hole[i] : null));
+    }
+
     private awardPot(event: Extract<HandEventPayload, { type: 'potAwarded' }>): void {
         const pot = this.potRoot?.worldPosition;
+        // 攤牌贏得的底池：凸顯這個底池贏家的牌型（有邊池時依序切換到各池的贏家）
+        if (event.category !== null) this.highlightWinningHand(event.winners.map((w) => w.seat));
         for (const { seat, amount } of event.winners) {
             const view = this.seatView(seat);
             if (!view || !pot) continue;
             this.flyChips(amount, pot, view.avatarWorldPosition, 0.6);
-            let result: string | null = null;
-            if (event.category !== null) {
-                const royal = event.category === HandCategory.StraightFlush && this.isRoyal(seat);
-                result = royal ? t('hand.royal') : t(`hand.${event.category}` as I18nKey);
-            }
-            view.showWinner(result);
+            const cards = this.showdownCards(seat);
+            view.showWinner(event.category !== null && cards.length >= 5 ? handName(cards) : null);
             if (this.coinBurst) {
                 this.coinBurst.node.setWorldPosition(view.avatarWorldPosition);
                 this.coinBurst.resetSystem();
@@ -460,30 +518,45 @@ export class TableView extends ViewBase {
         void audio.playSfx('chip_win');
     }
 
-    private highlightWinningCards(showdown: { seat: number; bestFive: Card[] }[]): void {
-        // 只標亮贏家（有 winGlow 的座位）的最佳五張
-        const snapshot = this.vm?.snapshot.value;
-        if (!snapshot || !showdown.length) return;
-        const best = new Set<Card>();
-        for (const result of showdown) {
-            const view = this.seatView(result.seat);
-            if (view?.winGlow?.active) {
-                result.bestFive.forEach((c) => best.add(c));
-                view.highlightCards(result.bestFive);
-            }
-        }
-        for (const card of this.board) card.setHighlight(!!card.code && best.has(card.code));
+    /** 攤牌時某個座位的底牌加上公共牌 */
+    private showdownCards(seat: number): Card[] {
+        const s = this.vm?.snapshot.value;
+        return [...(s?.seats[seat]?.shownCards ?? []), ...(s?.board ?? [])];
     }
 
-    private isRoyal(seat: number): boolean {
-        const s = this.vm?.snapshot.value;
-        const cards = [...(s?.seats[seat]?.shownCards ?? []), ...(s?.board ?? [])];
-        return ['A', 'K', 'Q', 'J', 'T'].every((rank) => cards.some((c) => c[0] === rank));
+    /**
+     * 凸顯贏家的牌型：構成牌型的牌（例如一對的那兩張）加上金框，同屬最佳五張的 kicker 維持原樣，
+     * 桌上其他亮出的牌（公共牌與所有攤牌者的底牌）變暗。
+     */
+    private highlightWinningHand(winners: number[]): void {
+        const made = new Set<Card>();
+        const best = new Set<Card>();
+        for (const seat of winners) {
+            const cards = this.showdownCards(seat);
+            if (cards.length < 5) continue;
+            const value = evaluateBest(cards);
+            value.bestFive.forEach((c) => best.add(c));
+            madeCards(value).forEach((c) => made.add(c));
+        }
+        if (!best.size) return;
+        const apply = (card: CardView) => {
+            const code = card.node.active && card.isFaceUp ? card.code : null;
+            card.setHighlight(!!code && made.has(code));
+            card.setDimmed(!!code && !best.has(code));
+        };
+        this.board.forEach(apply);
+        for (const seat of this.seats) seat.cards.forEach(apply);
     }
 
     // ---------------------------------------------------------------- 離開、觀戰、分享
 
     private async confirmLeave(): Promise<void> {
+        // 比賽已結束、房間已解散：不會棄牌，直接返回
+        if (this.gameOver) {
+            void this.vm?.leave();
+            this.backToLobby();
+            return;
+        }
         if (!this.confirmPopup || popups.count > 0) return;
         const ok = await popups.show<boolean, ConfirmPopup>(this.confirmPopup, (p) => p.setup({ message: 'table.leaveConfirm' }));
         if (!ok) return;
@@ -502,7 +575,8 @@ export class TableView extends ViewBase {
         const camera = director.getScene()?.getComponentInChildren(Canvas)?.cameraComponent;
         if (this.sharing || !camera) return;
         this.sharing = true;
-        const button = this.winBanner?.shareButton?.node;
+        // 截圖不含按鈕列（分享、返回大廳）
+        const button = this.winBanner?.buttons ?? this.winBanner?.shareButton?.node;
         if (button) button.active = false;
         try {
             const png = await captureToPng(camera);

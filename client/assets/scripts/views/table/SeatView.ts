@@ -134,9 +134,24 @@ export class SeatView extends Component {
         this.shownCards = cards ? [...cards] : null;
         this.cards.forEach((view, i) => {
             const card = cards?.[i];
-            view.node.active = !!cards;
-            if (cards) view.show(card ?? null, card !== null && card !== undefined);
+            // 發牌中可能只有第一張
+            const active = !!cards && i < cards.length;
+            view.node.active = active;
+            if (active) view.show(card ?? null, card !== null && card !== undefined);
         });
+    }
+
+    /** 發牌：第 index 張牌落地時顯示牌背，有牌面（自己的牌）時接著翻開 */
+    dealCard(index: number, card: Card | null): void {
+        const view = this.cards[index];
+        if (!view) return;
+        const shown = (this.shownCards ?? []).slice(0, index);
+        while (shown.length < index) shown.push(null);
+        shown.push(card);
+        this.shownCards = shown;
+        view.node.active = true;
+        view.show(null, false);
+        if (card) void view.flip(card, 0.24);
     }
 
     /** 攤牌：把牌背翻成牌面 */
@@ -216,14 +231,10 @@ export class SeatView extends Component {
     /** 新的一手：清除底牌、贏家效果、all-in 標記 */
     clearHand(): void {
         this.setCards(null);
-        for (const card of this.cards) card.setHighlight(false);
+        for (const card of this.cards) card.clearEmphasis();
         if (this.winGlow) this.winGlow.active = false;
         if (this.resultLabel) this.resultLabel.node.active = false;
         if (this.allInBadge) this.allInBadge.node.active = false;
-    }
-
-    highlightCards(codes: readonly Card[]): void {
-        for (const card of this.cards) card.setHighlight(!!card.code && card.isFaceUp && codes.includes(card.code));
     }
 
     /** 發牌動畫的落點（世界座標） */

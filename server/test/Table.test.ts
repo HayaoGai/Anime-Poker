@@ -326,7 +326,7 @@ describe('淘汰與比賽結束', () => {
     const allInHand = () =>
         headsUp({ 0: ['As', 'Ad'], 1: ['7c', '2d'] }, ['Ks', '9h', '4c', '3d', 'Jh']);
 
-    it('輸光的真人轉為觀戰；只剩一人時比賽結束並回到大廳', () => {
+    it('只剩一人有籌碼時比賽結束並解散房間：不送解散通知，也不送輸光通知', () => {
         const { table, output, scheduler } = allInHand();
         table.handleMessage('alice', ClientMessage.StartGame, {});
         until(scheduler, () => table.state.turnSeat === 0);
@@ -336,15 +336,38 @@ describe('淘汰與比賽結束', () => {
 
         until(scheduler, () => output.broadcasts(ServerMessage.GameOver).length > 0);
         expect(output.broadcasts(ServerMessage.GameOver)[0].payload).toEqual({ winnerSeat: 0, nickname: 'Alice' });
-        expect(output.sentTo('bob', ServerMessage.Notice).map((m) => m.payload.code)).toContain(NoticeCode.Eliminated);
-        expect(table.state.seats[1].occupied).toBe(false);
+        expect(output.dissolved).toBe(true);
+        expect(output.broadcasts(ServerMessage.Notice).map((m) => m.payload.code)).not.toContain(NoticeCode.RoomDissolved);
+        expect(output.sentTo('bob', ServerMessage.Notice).map((m) => m.payload.code)).not.toContain(NoticeCode.Eliminated);
         expect(table.state.seats[0].stack).toBe(STARTING_STACK * 2);
-
-        until(scheduler, () => table.state.phase === RoomPhase.Lobby);
-        expect(output.listing).toMatchObject({ phase: RoomPhase.Lobby, players: 1, spectators: 1 });
     });
 
-    it('唯一的真人輸光時房間解散', () => {
+    it('輸光的真人轉為觀戰，比賽繼續', () => {
+        const ctx = createTable({
+            rng: () => 0,
+            createDeck: () => riggedDeck({ button: 0, seats: [0, 1, 2], holes: { 0: ['As', 'Ad'], 1: ['7c', '2d'], 2: ['8c', '3d'] }, board: ['Ks', '9h', '4c', '5d', 'Jh'] }),
+        });
+        const { table, output, scheduler } = ctx;
+        table.join('alice', player('Alice'));
+        table.join('bob', player('Bob'));
+        table.join('carol', player('Carol'));
+        table.handleMessage('alice', ClientMessage.StartGame, {});
+        // 按鈕在 0 號座位：三人時由莊家（Alice）先行動
+        until(scheduler, () => table.state.turnSeat === 0);
+        act(table, 'alice', ActionType.AllIn);
+        until(scheduler, () => table.state.turnSeat === 1);
+        act(table, 'bob', ActionType.AllIn);
+        until(scheduler, () => table.state.turnSeat === 2);
+        act(table, 'carol', ActionType.Fold);
+
+        until(scheduler, () => table.state.handNumber === 2);
+        expect(output.sentTo('bob', ServerMessage.Notice).map((m) => m.payload.code)).toContain(NoticeCode.Eliminated);
+        expect(table.state.seats[1].occupied).toBe(false);
+        expect(output.broadcasts(ServerMessage.GameOver)).toEqual([]);
+        expect(output.dissolved).toBe(false);
+    });
+
+    it('唯一的真人輸光時比賽結束並解散房間，贏家是電腦', () => {
         // 小範圍（按鈕、頭像、思考時間）固定為 0，讓按鈕落在 0 號座位；電腦估算勝率的抽樣仍使用正常亂數
         const seeded = seededRng(5);
         const ctx = createTable({
@@ -358,6 +381,25 @@ describe('淘汰與比賽結束', () => {
         act(ctx.table, 'alice', ActionType.AllIn);
 
         until(ctx.scheduler, () => ctx.output.dissolved);
+        const [gameOver] = ctx.output.broadcasts(ServerMessage.GameOver);
+        expect(gameOver.payload).toEqual({ winnerSeat: 1, nickname: ctx.table.state.seats[1].nickname });
+        expect(ctx.output.broadcasts(ServerMessage.Notice).map((m) => m.payload.code)).not.toContain(NoticeCode.RoomDissolved);
+    });
+
+    it('比賽中最後一位真人改為觀戰：等這手打完後比賽結束，電腦還有多位時沒有贏家', () => {
+        const { table, output, scheduler } = createTable({ rng: seededRng(11), botThinkMs: [100, 100] });
+        table.join('alice', player('Alice'));
+        table.handleMessage('alice', ClientMessage.AddBot, {});
+        table.handleMessage('alice', ClientMessage.AddBot, {});
+        table.handleMessage('alice', ClientMessage.StartGame, {});
+        until(scheduler, () => table.state.turnSeat !== -1);
+
+        table.handleMessage('alice', ClientMessage.StandUp, {});
+        expect(output.dissolved).toBe(false);
+        until(scheduler, () => output.broadcasts(ServerMessage.HandEvent).some((m) => m.payload.type === 'handEnded'));
+        until(scheduler, () => output.dissolved);
+        expect(output.broadcasts(ServerMessage.GameOver).map((m) => m.payload)).toEqual([{ winnerSeat: -1, nickname: '' }]);
+        expect(table.state.handNumber).toBe(1);
     });
 });
 

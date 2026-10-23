@@ -23,6 +23,7 @@ export class LocalTableSession implements TableSession {
     /** 牌桌時鐘就是本機時鐘：沒有校正樣本時 offset 為 0 */
     readonly timeSync = new TimeSync();
     readonly sessionId = LOCAL_SESSION_ID;
+    readonly offline = true;
 
     private readonly hub = new MessageHub();
     private readonly stateListeners = new Set<(state: unknown) => void>();

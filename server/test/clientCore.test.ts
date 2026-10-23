@@ -228,6 +228,17 @@ describe('RoomSession', () => {
         expect(room.leave).toHaveBeenCalledWith(true);
     });
 
+    it('收到比賽結束後立即離開房間（伺服器隨即解散房間）', () => {
+        const room = fakeRoom();
+        const session = new RoomSession(room as never);
+        const results: unknown[] = [];
+        session.on(ServerMessage.GameOver, (p) => results.push(p));
+        room.receive(ServerMessage.GameOver, { winnerSeat: 0, nickname: 'Alice' });
+        expect(results).toEqual([{ winnerSeat: 0, nickname: 'Alice' }]);
+        expect(session.connection.value).toBe('closed');
+        expect(room.leave).toHaveBeenCalledWith(true);
+    });
+
     it('訂閱者拋出例外時，其他訂閱者照常收到，收到解散通知後仍立即離開', () => {
         const room = fakeRoom();
         const session = new RoomSession(room as never);

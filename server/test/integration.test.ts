@@ -81,10 +81,11 @@ describe('Colyseus 整合', () => {
         const bobSees = JSON.stringify([bobMsgs, (bob.state as any).toJSON()]);
         for (const card of aliceCards) expect(bobSees).not.toContain(`"${card}"`);
 
-        // 唯一的另一位真人離開後只剩 Alice；Alice 也離開時房間解散，觀戰者收到通知
+        // 唯一的另一位真人離開後只剩 Alice；Alice 也離開時比賽結束、房間解散，觀戰者收到比賽結束（不是解散通知）
         await bob.leave();
         await alice.leave();
-        await waitFor(() => viewerMsgs.some((m) => m.type === ServerMessage.Notice && m.payload.code === NoticeCode.RoomDissolved));
+        await waitFor(() => viewerMsgs.some((m) => m.type === ServerMessage.GameOver));
+        expect(viewerMsgs.some((m) => m.type === ServerMessage.Notice && m.payload.code === NoticeCode.RoomDissolved)).toBe(false);
         await lobby.leave();
     });
 

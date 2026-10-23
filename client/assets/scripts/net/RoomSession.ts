@@ -38,6 +38,7 @@ export class RoomSession<State = unknown> implements TableSession {
     readonly connection = new Observable<ConnectionState>('connected');
     readonly timeSync = new TimeSync();
     readonly room: Colyseus.Room<State>;
+    readonly offline = false;
 
     private readonly hub = new MessageHub();
     private timeSyncTimer: ReturnType<typeof setInterval> | null = null;
@@ -101,10 +102,9 @@ export class RoomSession<State = unknown> implements TableSession {
 
     private dispatch(type: string, payload: unknown): void {
         this.hub.deliver(type, payload);
-        // 房間解散：通知送達後立即結束這個連線，不等伺服器關閉（見 leaveRoom）
-        if (type === ServerMessage.Notice && (payload as ServerPayloads[typeof ServerMessage.Notice]).code === NoticeCode.RoomDissolved) {
-            void this.leave();
-        }
+        // 房間解散（比賽結束時也會解散）：通知送達後立即結束這個連線，不等伺服器關閉（見 leaveRoom）
+        const dissolved = type === ServerMessage.Notice && (payload as ServerPayloads[typeof ServerMessage.Notice]).code === NoticeCode.RoomDissolved;
+        if (dissolved || type === ServerMessage.GameOver) void this.leave();
     }
 
     private close(): void {
