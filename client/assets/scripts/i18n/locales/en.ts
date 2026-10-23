@@ -16,7 +16,6 @@ export const en: Record<I18nKey, string> = {
     'title.tapToStart': 'Press any key to start',
     'title.exitConfirm': 'Quit the game?',
     'credits.title': 'Credits',
-    'credits.role': 'Design · Programming · Art',
     'credits.version': 'Version {version}',
 
     'profile.title': 'Create your character',

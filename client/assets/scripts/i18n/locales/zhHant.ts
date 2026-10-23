@@ -18,7 +18,6 @@ export const zhHant = {
     'title.tapToStart': '點按任意鍵開始',
     'title.exitConfirm': '確定要離開遊戲嗎？',
     'credits.title': '製作人員',
-    'credits.role': '企劃・程式・美術',
     'credits.version': '版本 {version}',
 
     'profile.title': '設定你的角色',

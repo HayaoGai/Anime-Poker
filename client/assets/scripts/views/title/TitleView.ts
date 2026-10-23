@@ -58,12 +58,11 @@ export class TitleView extends Component {
         if (this.started || popups.count > 0) return;
         this.started = true;
         void audio.playSfx('ui_click');
-        director.loadScene(this.nextScene);
+        setTimeout(() => director.loadScene(this.nextScene), 500);
     }
 
     private openCredits(): void {
         if (!this.creditsPopup) return;
-        void audio.playSfx('ui_click');
         void popups.show(this.creditsPopup);
     }
 

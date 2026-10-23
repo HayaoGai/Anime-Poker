@@ -16,7 +16,6 @@ export const zhHans: Record<I18nKey, string> = {
     'title.tapToStart': '点击任意键开始',
     'title.exitConfirm': '确定要退出游戏吗？',
     'credits.title': '制作人员',
-    'credits.role': '策划・程序・美术',
     'credits.version': '版本 {version}',
 
     'profile.title': '设置你的角色',
