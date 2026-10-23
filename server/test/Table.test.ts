@@ -99,6 +99,27 @@ describe('房間大廳', () => {
         expect(output.last('host', ServerMessage.Error)?.payload).toEqual({ code: ErrorCode.InvalidMessage });
     });
 
+    it('電腦的頭像優先挑牌桌上還沒有人用的', () => {
+        for (let seed = 1; seed <= 20; seed++) {
+            const { table } = createTable({ rng: seededRng(seed) });
+            table.join('host', player('Host', { avatarId: 'avatar_03' }));
+            table.join('guest', player('Guest', { avatarId: 'avatar_05' }));
+            for (let i = 0; i < 4; i++) table.handleMessage('host', ClientMessage.AddBot, {});
+            const avatars = table.state.seats.map((s) => s.avatarId);
+            expect(new Set(avatars).size).toBe(6);
+        }
+    });
+
+    it('移除電腦後空出的頭像會再被選到', () => {
+        const { table } = createTable({ rng: seededRng(7) });
+        table.join('host', player('Host', { avatarId: 'avatar_01' }));
+        for (let i = 0; i < 5; i++) table.handleMessage('host', ClientMessage.AddBot, {});
+        const removed = table.state.seats[2].avatarId;
+        table.handleMessage('host', ClientMessage.RemoveBot, { seat: 2 });
+        table.handleMessage('host', ClientMessage.AddBot, { seat: 2 });
+        expect(table.state.seats[2].avatarId).toBe(removed);
+    });
+
     it('至少兩位參賽者才能開始', () => {
         const { table, output } = createTable();
         table.join('host', player('Host'));

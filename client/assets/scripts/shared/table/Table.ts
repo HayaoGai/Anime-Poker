@@ -256,13 +256,18 @@ export class Table<S extends TableState = TableState> {
         if (seat === null) return data.seat === undefined ? ErrorCode.TableFull : ErrorCode.InvalidMessage;
         if (this.state.seats[seat].occupied) return ErrorCode.SeatTaken;
 
-        const used = new Set(this.state.seats.filter((s) => s.occupied).map((s) => s.nickname));
-        const names = BOT_NAMES.filter((n) => !used.has(n));
+        const seated = this.state.seats.filter((s) => s.occupied);
+        const usedNames = new Set(seated.map((s) => s.nickname));
+        const names = BOT_NAMES.filter((n) => !usedNames.has(n));
+        // 頭像優先挑牌桌上（真人與電腦）還沒有人用的，全部都有人用時才重複
+        const usedAvatars = new Set(seated.map((s) => s.avatarId));
+        const freshAvatars = DEFAULT_AVATAR_IDS.filter((id) => !usedAvatars.has(id));
+        const avatars = freshAvatars.length ? freshAvatars : DEFAULT_AVATAR_IDS;
         this.occupySeat(seat, {
             sessionId: '',
             isBot: true,
             nickname: names[this.rng(names.length)] ?? `Bot ${seat + 1}`,
-            avatarId: DEFAULT_AVATAR_IDS[this.rng(DEFAULT_AVATAR_IDS.length)],
+            avatarId: avatars[this.rng(avatars.length)],
         });
         this.refreshListing();
         return null;
