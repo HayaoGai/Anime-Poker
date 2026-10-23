@@ -68,7 +68,7 @@ client/                 Cocos Creator 專案
   native/engine/android Android 原生專案（Java + Kotlin 橋接模組）
 server/                 Colyseus 伺服器與測試（vitest）
 shared/                 用戶端與伺服器共用的型別與常數
-tools/                  素材、場景產生器，以及建置與發佈指令
+tools/                  素材產生器，以及建置與發佈指令
 render.yaml             Render 部署設定
 ```
 
@@ -101,7 +101,6 @@ pnpm typecheck         # 伺服器 + 用戶端型別檢查
 | `pnpm gen:art` | 以 SVG 產生牌面、籌碼、圖示、粒子等圖片（resvg 轉成 PNG） |
 | `pnpm gen:sfx` | 以程式合成音效（WAV） |
 | `pnpm gen:fonts <字型資料夾>` | 產生遊戲內文字的字型子集（需要 Python 與 fontTools，來源字型的下載方式見 `tools/gen-fonts/subset.py`） |
-| `pnpm gen:scenes` | 產生場景、Prefab 與 AnimationClip（已存在的檔案不覆寫，加 `--force` 才會覆寫） |
 
 ## 部署
 

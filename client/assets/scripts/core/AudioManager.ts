@@ -83,6 +83,12 @@ class AudioService {
         voice.play();
     }
 
+    /** 中斷選擇頭像的人聲（含載入中尚未播放的） */
+    stopSelectVoice(): void {
+        this.selectVoiceToken++;
+        this.voiceSource?.stop();
+    }
+
     /** 切換背景音樂；傳 null 停止。相同曲目不會重新開始 */
     async playBgm(name: BgmName | null): Promise<void> {
         if (name === this.currentBgm) return;

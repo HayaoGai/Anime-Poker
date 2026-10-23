@@ -1,5 +1,5 @@
-import { _decorator, Component, Sprite, SpriteFrame } from 'cc';
-import { avatarById } from '../../config/Avatars';
+import { _decorator, Component, Enum, Sprite, SpriteFrame } from 'cc';
+import { avatarById, AvatarVariant } from '../../config/Avatars';
 import { loadResource } from '../../core/ResourceCache';
 
 const { ccclass, property, menu } = _decorator;
@@ -11,6 +11,9 @@ export class AvatarImage extends Component {
     @property(Sprite)
     sprite: Sprite | null = null;
 
+    @property({ type: Enum(AvatarVariant), tooltip: '載入哪一種圖片：Icon 圖示、Full 立繪、Table 牌桌座位' })
+    variant = AvatarVariant.Icon;
+
     private current = '';
 
     setAvatar(avatarId: string): void {
@@ -20,7 +23,7 @@ export class AvatarImage extends Component {
             if (this.sprite) this.sprite.spriteFrame = null;
             return;
         }
-        void loadResource(avatarById(avatarId).texture, SpriteFrame).then((frame) => {
+        void loadResource(avatarById(avatarId).texture[this.variant], SpriteFrame).then((frame) => {
             // 載入期間頭像又換了，就不套用舊的結果
             if (this.isValid && this.sprite && this.current === avatarId && frame) this.sprite.spriteFrame = frame;
         });

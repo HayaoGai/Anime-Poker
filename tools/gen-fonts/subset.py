@@ -10,7 +10,7 @@
 系統字型（Arial）沒有中文字，瀏覽器會逐字改用其他字型，部分字沒有粗體而粗細不一，
 因此改為內建字型：簡體用 CN 字形、繁體與英文用 TW 字形。收錄的字：
   - ASCII、常用全形標點
-  - 客戶端程式與場景產生器裡出現的所有字（含三個語系的文字）
+  - 客戶端程式、場景與 Prefab 裡出現的所有字（含三個語系的文字）
   - 常用字：GB2312 一級字（3755 字）與 Big5 常用字（5401 字），涵蓋大部分暱稱
 TW 版本沒有的字（簡體字）從 CN 版本補入，繁體介面下的簡體暱稱也能以同一字型顯示。
 修改語系文字後請重新執行；server/test 會檢查語系文字是否都已收錄。
@@ -31,7 +31,7 @@ FONTS = {
     'tw': {'file': 'ResourceHanRoundedTW-Medium.ttf', 'donor': 'cn'},
     'cn': {'file': 'ResourceHanRoundedCN-Medium.ttf', 'donor': None},
 }
-SOURCE_GLOBS = [('client/assets/scripts', '*.ts'), ('tools/gen-scenes', '*.mjs')]
+SOURCE_GLOBS = [('client/assets/scripts', '*.ts'), ('client/assets/scenes', '*.scene'), ('client/assets/prefabs', '*.prefab')]
 PUNCTUATION = '，。、！？：；「」『』（）《》〈〉…・—～＋－％＄＃＆＊　'
 
 

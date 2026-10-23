@@ -4,7 +4,6 @@
 //   pnpm gen:art --only cards,chips   只產生指定類別
 //   pnpm gen:art --preview <資料夾>    另外輸出每個類別的預覽圖
 //
-// 替代圖（標題、背景、牌桌、頭像等使用者會提供的圖）只在檔案不存在時產生，不會覆蓋正式素材。
 // 新圖片需先由 Cocos 匯入產生 .meta，再執行一次本指令以套用「不裁切」與 9-slice 邊界設定。
 import { mkdirSync } from 'node:fs';
 import path from 'node:path';
@@ -15,10 +14,9 @@ import { generateIcons } from './icons.mjs';
 import { ensureAutoAtlas, patchSpriteMeta } from './lib/cocosMeta.mjs';
 import { writeContactSheet } from './lib/preview.mjs';
 import { generateParticles } from './particles.mjs';
-import { generateAppIcon, generatePlaceholders } from './placeholders.mjs';
 import { NINE_SLICE, generateUi } from './ui.mjs';
 
-// 放在 resources 底下，客戶端才能依 id 動態載入（例如依卡牌字串載入牌面、依頭像 id 載入頭像與人聲）
+// 放在 resources 底下，客戶端才能依 id 動態載入（例如依卡牌字串載入牌面、依頭像 id 載入人聲）
 const TEXTURES = path.join(CLIENT_DIR, 'assets', 'resources', 'textures');
 
 /** 建置時合併成圖集的資料夾與圖集大小 */
@@ -30,8 +28,6 @@ const GENERATORS = {
     icons: { run: () => generateIcons(TEXTURES), sheet: { cell: 110, columns: 9, background: '#b79cff' } },
     ui: { run: () => generateUi(TEXTURES), sheet: { cell: 150, columns: 8 } },
     particles: { run: () => generateParticles(TEXTURES), sheet: { cell: 110, columns: 7, background: '#4b3f72' } },
-    placeholders: { run: () => generatePlaceholders(TEXTURES), sheet: { cell: 240, columns: 5 } },
-    appIcon: { run: () => generateAppIcon(), sheet: { cell: 140, columns: 6 } },
 };
 
 const { values } = parseArgs();
@@ -50,8 +46,6 @@ for (const name of only) {
     info(`${name}：${files.length} 張`);
     if (previewDir) writeContactSheet(files, path.join(previewDir, `${name}.png`), generator.sheet);
 
-    // Android 啟動圖示不在 assets 內，不經 Cocos 匯入
-    if (name === 'appIcon') continue;
     for (const file of files) {
         const result = patchSpriteMeta(file, { border: NINE_SLICE[path.basename(file, '.png')] });
         if (result === 'missing') missingMeta.push(path.relative(CLIENT_DIR, file));
