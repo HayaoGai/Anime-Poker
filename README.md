@@ -99,6 +99,7 @@ pnpm typecheck         # 伺服器 + 用戶端型別檢查
 | `pnpm sync:shared` | 把 `shared/src` 同步到用戶端 |
 | `pnpm sync:vendor` | 把 Colyseus SDK 的 UMD bundle 複製到 `client/assets/plugins`，並設為 Cocos 插件腳本 |
 | `pnpm gen:art` | 以 SVG 產生牌面、籌碼、圖示、粒子等圖片（resvg 轉成 PNG） |
+| `pnpm gen:icon` | 由 `client/native-res/` 的前景、背景圖產生 Android 啟動圖示（自適應圖示與舊版圖示） |
 | `pnpm gen:sfx` | 以程式合成音效（WAV） |
 | `pnpm gen:fonts <字型資料夾>` | 產生遊戲內文字的字型子集（需要 Python 與 fontTools，來源字型的下載方式見 `tools/gen-fonts/subset.py`） |
 
