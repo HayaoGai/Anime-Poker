@@ -10,61 +10,15 @@ const RANKS = ['2', '3', '4', '5', '6', '7', '8', '9', 'T', 'J', 'Q', 'K', 'A'];
 const SUITS = ['s', 'h', 'd', 'c'];
 const LABEL = { T: '10' };
 
-// 點數牌的牌面圖案位置（L/C/R 欄 × y），y 大於中線的圖案倒置
-const X = { L: 66, C: 100, R: 134 };
-const PIPS = {
-    2: [['C', 74], ['C', 206]],
-    3: [['C', 74], ['C', 140], ['C', 206]],
-    4: [['L', 74], ['R', 74], ['L', 206], ['R', 206]],
-    5: [['L', 74], ['R', 74], ['C', 140], ['L', 206], ['R', 206]],
-    6: [['L', 74], ['R', 74], ['L', 140], ['R', 140], ['L', 206], ['R', 206]],
-    7: [['L', 74], ['R', 74], ['C', 107], ['L', 140], ['R', 140], ['L', 206], ['R', 206]],
-    8: [['L', 74], ['R', 74], ['C', 107], ['L', 140], ['R', 140], ['C', 173], ['L', 206], ['R', 206]],
-    9: [['L', 74], ['R', 74], ['L', 118], ['R', 118], ['C', 140], ['L', 162], ['R', 162], ['L', 206], ['R', 206]],
-    T: [['L', 74], ['R', 74], ['C', 96], ['L', 118], ['R', 118], ['L', 162], ['R', 162], ['C', 184], ['L', 206], ['R', 206]],
-};
-
-function cardBase(id, extraDefs = '') {
-    const defs = linear(`${id}-paper`, [[0, '#ffffff'], [1, '#fff4f8']]) + extraDefs;
+function cardBase(id) {
+    const defs = linear(`${id}-paper`, [[0, '#ffffff'], [1, '#fff4f8']]);
     const body = `
         <rect x="2" y="2" width="${W - 4}" height="${H - 4}" rx="16" fill="url(#${id}-paper)" stroke="#e7dcf3" stroke-width="3"/>
         <rect x="10" y="10" width="${W - 20}" height="${H - 20}" rx="10" fill="none" stroke="#f6e3ee" stroke-width="2"/>`;
     return { defs, body };
 }
 
-/** 左上與右下（倒置）的角標 */
-function corners(rank, suit) {
-    const color = SUIT_COLOR[suit];
-    const label = LABEL[rank] ?? rank;
-    const index = `
-        ${text(label, 0, 0, { size: label.length > 1 ? 34 : 40, fill: color, extra: 'dominant-baseline="middle"' })}
-        ${place(SUIT_PATH[suit], 0, 34, 24, { fill: color })}`;
-    return `
-        <g transform="translate(28 34)">${index}</g>
-        <g transform="translate(${W - 28} ${H - 34}) rotate(180)">${index}</g>`;
-}
-
-function pipCard(rank, suit) {
-    const color = SUIT_COLOR[suit];
-    return PIPS[rank].map(([col, y]) => place(SUIT_PATH[suit], X[col], y, 36, { fill: color, rotate: y > 140 ? 180 : 0 })).join('');
-}
-
-function aceCard(suit, id) {
-    const color = SUIT_COLOR[suit];
-    const halo = suit === 'h' || suit === 'd' ? C.pinkLight : C.lavenderLight;
-    const defs = radial(`${id}-halo`, [[0, halo, 1], [1, halo, 0]]);
-    const body = `
-        <circle cx="100" cy="140" r="70" fill="url(#${id}-halo)"/>
-        <circle cx="100" cy="140" r="58" fill="none" stroke="${halo}" stroke-width="3" stroke-dasharray="2 8" stroke-linecap="round"/>
-        ${place(SUIT_PATH[suit], 100, 140, 86, { fill: color })}
-        ${place(sparklePath(), 52, 92, 26, { fill: C.gold })}
-        ${place(sparklePath(), 150, 190, 22, { fill: C.gold })}
-        ${place(sparklePath(), 150, 96, 14, { fill: C.pink })}
-        ${place(sparklePath(), 54, 186, 12, { fill: C.lavender })}`;
-    return { defs, body };
-}
-
-/** 人頭牌的頂部徽章：K 王冠、Q 后冠、J 星星緞帶 */
+/** 人頭牌右上角的小徽章：K 王冠、Q 后冠、J 星星緞帶（設計框中心約在 100,76） */
 function emblem(rank, color) {
     if (rank === 'K') {
         return `<path d="M72 92 L72 70 L86 82 L100 62 L114 82 L128 70 L128 92 Z" fill="${C.gold}" stroke="${C.goldDeep}" stroke-width="3" stroke-linejoin="round"/>
@@ -78,33 +32,24 @@ function emblem(rank, color) {
         ${place(starPath(), 100, 74, 26, { fill: C.gold, stroke: C.goldDeep, strokeWidth: 2 })}`;
 }
 
-function faceCard(rank, suit, id) {
-    const color = SUIT_COLOR[suit];
-    const red = suit === 'h' || suit === 'd';
-    const [light, mid] = red ? [C.pinkLight, C.pink] : [C.lavenderLight, C.lavender];
-    const defs =
-        linear(`${id}-panel`, [[0, '#ffffff'], [1, light]]) +
-        `<pattern id="${id}-dots" width="22" height="22" patternUnits="userSpaceOnUse">${place(HEART, 11, 11, 7, { fill: mid, opacity: 0.35 })}</pattern>`;
-    const body = `
-        <rect x="42" y="52" width="116" height="176" rx="14" fill="url(#${id}-panel)" stroke="${mid}" stroke-width="3"/>
-        <rect x="42" y="52" width="116" height="176" rx="14" fill="url(#${id}-dots)"/>
-        ${emblem(rank, color)}
-        ${text(rank, 100, 168, { size: 84, fill: '#ffffff', stroke: color, strokeWidth: 12 })}
-        ${place(SUIT_PATH[suit], 100, 200, 26, { fill: color })}
-        ${place(sparklePath(), 58, 120, 14, { fill: C.gold })}
-        ${place(sparklePath(), 142, 196, 12, { fill: C.gold })}`;
-    return { defs, body };
-}
-
+/** 手機上也要一眼看出牌：左上大點數 + 小花色，右下大花色；人頭牌右上加徽章、A 加閃光點綴 */
 function cardSvg(rank, suit) {
     const id = `c${rank}${suit}`;
-    let content;
-    if (rank === 'A') content = aceCard(suit, id);
-    else if ('JQK'.includes(rank)) content = faceCard(rank, suit, id);
-    else content = { defs: '', body: pipCard(rank, suit) };
+    const color = SUIT_COLOR[suit];
+    const label = LABEL[rank] ?? rank;
+    // 用 SemiBold 讓筆畫細一點，「10」的兩個字才不會黏在一起
+    const rankText = text(label, 54, 72, { size: label.length > 1 ? 88 : 108, fill: color, weight: 600, extra: 'dominant-baseline="middle"' });
+    let deco = '';
+    if ('JQK'.includes(rank)) deco = `<g transform="translate(150 60) scale(1.05) translate(-100 -76)">${emblem(rank, color)}</g>`;
+    else if (rank === 'A') deco = place(sparklePath(), 152, 58, 34, { fill: C.gold }) + place(sparklePath(), 176, 92, 16, { fill: C.pink });
 
-    const base = cardBase(id, content.defs);
-    return svg(W, H, base.body + content.body + corners(rank, suit), base.defs);
+    const base = cardBase(id);
+    const body = `
+        ${rankText}
+        ${place(SUIT_PATH[suit], 52, 146, 50, { fill: color })}
+        ${place(SUIT_PATH[suit], 130, 204, 112, { fill: color })}
+        ${deco}`;
+    return svg(W, H, base.body + body, base.defs);
 }
 
 function backSvg() {
