@@ -1,7 +1,7 @@
 import { DEFAULT_AVATAR_IDS } from '../shared/protocol';
 
-/** 人聲對應的行動（每個頭像一組） */
-export const VOICE_ACTIONS = ['check', 'bet', 'call', 'raise', 'fold', 'allIn'] as const;
+/** 人聲對應的行動（每個頭像一組）：牌局行動，以及 select（選擇頭像時） */
+export const VOICE_ACTIONS = ['check', 'bet', 'call', 'raise', 'fold', 'allIn', 'select'] as const;
 export type VoiceAction = (typeof VOICE_ACTIONS)[number];
 
 export interface AvatarDef {

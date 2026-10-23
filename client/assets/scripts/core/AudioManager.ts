@@ -31,7 +31,7 @@ export type SfxName =
 export type BgmName = 'room' | 'room_list' | 'table';
 
 /** 牌局行動對應的人聲；all-in 優先 */
-export function voiceActionFor(kind: ActionKind, allIn: boolean): VoiceAction {
+export function voiceActionFor(kind: ActionKind, allIn: boolean): Exclude<VoiceAction, 'select'> {
     return allIn ? 'allIn' : kind;
 }
 
@@ -45,6 +45,9 @@ class AudioService {
 
     private bgmSource: AudioSource | null = null;
     private sfxSource: AudioSource | null = null;
+    /** 選擇頭像的人聲：獨立音源，才能中斷上一句 */
+    private voiceSource: AudioSource | null = null;
+    private selectVoiceToken = 0;
     private currentBgm: BgmName | null = null;
 
     constructor() {
@@ -64,6 +67,20 @@ class AudioService {
     async playVoice(avatarId: string, action: VoiceAction): Promise<void> {
         const clip = await loadResource(avatarById(avatarId).voice[action], AudioClip);
         if (clip) this.sources().sfx.playOneShot(clip, this.sfxVolume.value);
+    }
+
+    /** 播放選擇頭像的人聲，並中斷上一句仍在播放的 */
+    async playSelectVoice(avatarId: string): Promise<void> {
+        const token = ++this.selectVoiceToken;
+        const clip = await loadResource(avatarById(avatarId).voice.select, AudioClip);
+        // 載入期間又選了別的頭像，就不播放這句
+        if (!clip || token !== this.selectVoiceToken) return;
+        const { voice } = this.sources();
+        voice.stop();
+        voice.clip = clip;
+        voice.loop = false;
+        voice.volume = this.sfxVolume.value;
+        voice.play();
     }
 
     /** 切換背景音樂；傳 null 停止。相同曲目不會重新開始 */
@@ -91,15 +108,16 @@ class AudioService {
         if (this.currentBgm && this.bgmSource?.clip) this.bgmSource.play();
     }
 
-    private sources(): { bgm: AudioSource; sfx: AudioSource } {
-        if (!this.bgmSource || !this.sfxSource || !this.bgmSource.isValid) {
+    private sources(): { bgm: AudioSource; sfx: AudioSource; voice: AudioSource } {
+        if (!this.bgmSource || !this.sfxSource || !this.voiceSource || !this.bgmSource.isValid) {
             const node = new Node('AudioManager');
             director.getScene()!.addChild(node);
             director.addPersistRootNode(node);
             this.bgmSource = node.addComponent(AudioSource);
             this.sfxSource = node.addComponent(AudioSource);
+            this.voiceSource = node.addComponent(AudioSource);
         }
-        return { bgm: this.bgmSource, sfx: this.sfxSource! };
+        return { bgm: this.bgmSource, sfx: this.sfxSource!, voice: this.voiceSource! };
     }
 }
 

@@ -64,7 +64,9 @@ export class ProfilePopup extends PopupBase<boolean> {
             this.avatarGrid.addChild(node);
             node.getComponent(AvatarImage)?.setAvatar(avatar.id);
             node.on(Button.EventType.CLICK, () => {
-                void audio.playSfx('ui_click');
+                // 點已選的頭像只給點擊音，不打斷正在播放的人聲
+                if (avatar.id === this.selected) void audio.playSfx('ui_click');
+                else void audio.playSelectVoice(avatar.id);
                 this.select(avatar.id);
             });
             this.options.set(avatar.id, node);
