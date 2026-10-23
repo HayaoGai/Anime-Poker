@@ -13,7 +13,7 @@ const DEFAULT_TOP_Y = 440;
 class ToastService {
     private prefab: Prefab | null = null;
     private topY = DEFAULT_TOP_Y;
-    private readonly active: Node[] = [];
+    private active: Node[] = [];
 
     /** @param topY 第一則提示的 y 座標（各場景依頂部 UI 調整） */
     register(prefab: Prefab | null, topY = DEFAULT_TOP_Y): void {
@@ -24,6 +24,9 @@ class ToastService {
     show(text: string): void {
         const canvas = director.getScene()?.getComponentInChildren(Canvas);
         if (!this.prefab || !canvas || !text) return;
+
+        // 切換場景時，上一個場景的提示連同 tween 一起被銷毀，淡出後的移除不會執行，先清掉
+        this.active = this.active.filter((n) => n.isValid);
 
         const node = instantiate(this.prefab);
         const label = node.getComponentInChildren(Label);

@@ -9,7 +9,6 @@ const BRIDGE = 'com/lance/animepoker/bridge/';
 
 /** 原生 → JS 的事件名稱（與 Kotlin 的 NativeEvents 一致） */
 const NativeEvent = {
-    ImmersiveChanged: 'immersiveChanged',
     NetworkChanged: 'networkChanged',
     BatteryChanged: 'batteryChanged',
     BackPressed: 'backPressed',
@@ -23,19 +22,15 @@ const NativeEvent = {
  */
 export class AndroidBridge implements INativeBridge {
     readonly platform = 'android' as const;
-    readonly supportsFullscreen = true;
+    /** 固定為沉浸式全螢幕（原生端與 Cocos 的 CocosActivity 都會強制隱藏系統列），不提供切換 */
+    readonly supportsFullscreen = false;
 
-    private immersive = true;
     private online = true;
 
     init(): void {
         const listen = (event: string, handler: (arg: string) => void) =>
             native.jsbBridgeWrapper.addNativeEventListener(event, (arg?: string | null) => handler(arg ?? ''));
 
-        listen(NativeEvent.ImmersiveChanged, (arg) => {
-            this.immersive = arg === '1';
-            eventBus.emit('fullscreenChanged', this.immersive);
-        });
         listen(NativeEvent.NetworkChanged, (arg) => {
             this.online = arg === '1';
             eventBus.emit('networkChanged', this.online);
@@ -46,17 +41,14 @@ export class AndroidBridge implements INativeBridge {
         });
         listen(NativeEvent.BackPressed, () => backKey.trigger());
 
-        this.immersive = call<boolean>(`${BRIDGE}ImmersiveBridge`, 'isImmersive', '()Z') ?? true;
         this.online = call<boolean>(`${BRIDGE}NetworkMonitor`, 'isOnline', '()Z') ?? true;
     }
 
     isFullscreen(): boolean {
-        return this.immersive;
+        return true;
     }
 
-    async setFullscreen(on: boolean): Promise<void> {
-        call(`${BRIDGE}ImmersiveBridge`, 'setImmersive', '(Z)V', on);
-    }
+    async setFullscreen(_on: boolean): Promise<void> {}
 
     vibrate(pattern: HapticPattern): void {
         call(`${BRIDGE}HapticsBridge`, 'vibrate', '(Ljava/lang/String;)V', HAPTIC_PATTERNS[pattern].join(','));

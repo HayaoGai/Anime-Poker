@@ -1,8 +1,8 @@
 import { HandCategory } from '@shared/poker';
 import { describe, expect, it } from 'vitest';
 import { FULL_DECK, type Card } from '@shared/cards';
-import { fisherYates } from '../src/engine/Deck';
-import { evaluateBest, evaluateFive, scoreHand } from '../src/engine/HandEvaluator';
+import { fisherYates } from '@shared/engine/Deck';
+import { evaluateBest, evaluateFive, scoreHand } from '@shared/engine/HandEvaluator';
 import { seededRng } from './helpers';
 
 const hand = (text: string) => text.split(' ') as Card[];

@@ -1,54 +1,24 @@
 package com.lance.animepoker.bridge
 
 import android.app.Activity
-import androidx.core.view.ViewCompat
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
-import java.lang.ref.WeakReference
 
 /**
- * 沉浸式全螢幕：隱藏狀態列與導覽列，使用者從邊緣滑動時暫時顯示。
- * 系統列的顯示狀態變化（包含使用者滑出）會推送給 JS，讓全螢幕按鈕的圖示同步。
+ * 沉浸式全螢幕：隱藏狀態列與導覽列，使用者從邊緣滑動時暫時顯示，之後自動隱藏。
  *
- * JS 以 native.reflection.callStaticMethod 呼叫，Kotlin 的 object 方法必須加上 @JvmStatic
- * 才會編譯成真正的 Java static 方法，否則 reflection 找不到。
+ * Android 版固定為全螢幕、不提供切換：Cocos 的 CocosActivity 本身就會在建立與取得焦點時強制隱藏系統列，
+ * 而且 targetSdk 35+ 強制 edge-to-edge，顯示系統列只會蓋住遊戲畫面。
  */
 object ImmersiveBridge {
-    private var activityRef: WeakReference<Activity>? = null
-    private var immersive = false
-
-    fun attach(activity: Activity) {
-        activityRef = WeakReference(activity)
-        val decor = activity.window.decorView
-        ViewCompat.setOnApplyWindowInsetsListener(decor) { view, insets ->
-            val hidden = !insets.isVisible(WindowInsetsCompat.Type.systemBars())
-            if (hidden != immersive) {
-                immersive = hidden
-                NativeEvents.dispatch(NativeEvents.IMMERSIVE_CHANGED, if (hidden) "1" else "0")
-            }
-            ViewCompat.onApplyWindowInsets(view, insets)
-        }
-        // 遊戲預設以全螢幕啟動
-        setImmersive(true)
-    }
-
-    @JvmStatic
-    fun setImmersive(on: Boolean) {
-        val activity = activityRef?.get() ?: return
-        // 呼叫來自 GL thread，視窗操作必須回到 UI thread
+    fun apply(activity: Activity) {
+        // 可能由背景執行緒呼叫，視窗操作必須回到 UI thread
         activity.runOnUiThread {
             val window = activity.window
             val controller = WindowCompat.getInsetsController(window, window.decorView)
-            if (on) {
-                controller.systemBarsBehavior = WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
-                controller.hide(WindowInsetsCompat.Type.systemBars())
-            } else {
-                controller.show(WindowInsetsCompat.Type.systemBars())
-            }
+            controller.systemBarsBehavior = WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
+            controller.hide(WindowInsetsCompat.Type.systemBars())
         }
     }
-
-    @JvmStatic
-    fun isImmersive(): Boolean = immersive
 }

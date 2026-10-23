@@ -1,5 +1,7 @@
 import type { ServerMessage, ServerPayloads, RoomMetadata } from '@shared/protocol';
-import { Table, type Scheduler, type TableOptions, type TableOutput, type Timer } from '../src/rooms/Table';
+import { Table, type Scheduler, type TableOptions, type TableOutput, type Timer } from '@shared/table/Table';
+import { cryptoRng } from '../src/rng';
+import { createPokerState, type PokerState } from '../src/rooms/schema';
 
 /** 手動推進的時鐘：advance 時依時間順序執行到期的計時器 */
 export class ManualScheduler implements Scheduler {
@@ -83,10 +85,11 @@ export class RecordingOutput implements TableOutput {
     }
 }
 
-export function createTable(options: Partial<Omit<TableOptions, 'output' | 'scheduler'>> = {}) {
+/** 以伺服器實際使用的 Schema 狀態建立牌桌 */
+export function createTable(options: Partial<Omit<TableOptions<PokerState>, 'output' | 'scheduler'>> = {}) {
     const output = new RecordingOutput();
     const scheduler = new ManualScheduler();
-    const table = new Table({ output, scheduler, botThinkMs: [1000, 1000], ...options });
+    const table = new Table({ state: createPokerState(), rng: cryptoRng, output, scheduler, botThinkMs: [1000, 1000], ...options });
     return { table, output, scheduler };
 }
 

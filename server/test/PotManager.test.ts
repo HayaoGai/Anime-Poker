@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { buildPots, findUncalled, splitPot } from '../src/engine/PotManager';
+import { buildPots, findUncalled, splitPot } from '@shared/engine/PotManager';
 
 const c = (seat: number, amount: number, folded = false) => ({ seat, amount, folded });
 

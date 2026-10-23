@@ -50,9 +50,13 @@ export class Flyer {
         const progress = { t: 0 };
         const position = new Vec3();
         return new Promise((resolve) => {
-            tween(progress)
+            // 補間的是一般物件，Cocos 不會因為節點銷毀（例如飛行中離開牌桌）而自動停止，要自己檢查。
+            // 節點已銷毀時停止且不 resolve，呼叫端接在後面的動畫（翻牌等）也就不會再操作已銷毀的節點
+            const alive = () => node.isValid || (action.stop(), false);
+            const action = tween(progress)
                 .delay(delay)
                 .call(() => {
+                    if (!alive()) return;
                     node.active = true;
                     node.setPosition(from);
                     node.setScale(fromScale, fromScale, 1);
@@ -61,6 +65,7 @@ export class Flyer {
                 .to(duration, { t: 1 }, {
                     easing: 'quadOut',
                     onUpdate: () => {
+                        if (!alive()) return;
                         const t = progress.t;
                         const u = 1 - t;
                         position.set(u * u * from.x + 2 * u * t * control.x + t * t * to.x, u * u * from.y + 2 * u * t * control.y + t * t * to.y, 0);
@@ -71,6 +76,7 @@ export class Flyer {
                     },
                 })
                 .call(() => {
+                    if (!alive()) return;
                     node.active = false;
                     this.pool.push(node);
                     resolve();

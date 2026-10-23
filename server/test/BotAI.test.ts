@@ -3,7 +3,7 @@ import type { LegalActions } from '@shared/events';
 import { ActionType } from '@shared/poker';
 import { BIG_BLIND } from '@shared/rules';
 import { describe, expect, it } from 'vitest';
-import { decideBotAction, estimateEquity } from '../src/engine/BotAI';
+import { decideBotAction, estimateEquity } from '@shared/engine/BotAI';
 import { seededRng } from './helpers';
 
 const cards = (text: string) => (text ? (text.split(' ') as Card[]) : []);

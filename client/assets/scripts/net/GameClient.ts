@@ -49,7 +49,8 @@ class GameClientService {
         return 'NETWORK';
     }
 
-    private joinOptions(asSpectator: boolean): JoinOptions {
+    /** 加入牌桌時帶的玩家資料（離線模式開桌也使用） */
+    joinOptions(asSpectator: boolean): JoinOptions {
         return { playerId: profile.playerId, nickname: profile.nickname.value, avatarId: profile.avatarId.value, asSpectator };
     }
 }

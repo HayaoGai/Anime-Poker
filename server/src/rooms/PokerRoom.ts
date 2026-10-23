@@ -2,8 +2,9 @@ import { Room, ServerError, type Client } from '@colyseus/core';
 import { ErrorCode } from '@shared/errors';
 import { ClientMessage, RoomPhase, type RoomMetadata } from '@shared/protocol';
 import { MAX_SEATS, RECONNECT_GRACE_MS } from '@shared/rules';
-import type { PokerState } from './schema';
-import { Table, type TableOptions } from './Table';
+import { Table, type TableOptions } from '@shared/table/Table';
+import { cryptoRng } from '../rng';
+import { createPokerState, type PokerState } from './schema';
 
 /** 測試可覆寫 Table 的時間設定（不經由客戶端，客戶端無法影響） */
 export const pokerRoomOverrides: Partial<Pick<TableOptions, 'pacing' | 'botThinkMs' | 'actionTimeoutMs' | 'createDeck' | 'rng'>> & {
@@ -14,11 +15,13 @@ export const pokerRoomOverrides: Partial<Pick<TableOptions, 'pacing' | 'botThink
  * Colyseus 轉接層：把連線生命週期與訊息交給 Table，自己不含任何牌局規則。
  */
 export class PokerRoom extends Room<{ state: PokerState; metadata: RoomMetadata }> {
-    private table!: Table;
+    private table!: Table<PokerState>;
 
     onCreate(): void {
         const { reconnectGraceMs: _, ...overrides } = pokerRoomOverrides;
         this.table = new Table({
+            state: createPokerState(),
+            rng: cryptoRng,
             ...overrides,
             output: {
                 broadcast: (type, payload) => this.broadcast(type, payload),

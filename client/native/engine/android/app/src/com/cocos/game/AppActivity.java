@@ -77,7 +77,7 @@ public class AppActivity extends CocosActivity {
     protected void onResume() {
         super.onResume();
         SDKWrapper.shared().onResume();
-        NativeBridges.onResume();
+        NativeBridges.onResume(this);
     }
 
     @Override

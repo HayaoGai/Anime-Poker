@@ -1,17 +1,17 @@
 import { Observable, type Unsubscribe } from '../core/Observable';
-import type { RoomSession } from '../net/RoomSession';
+import type { TableSession } from '../net/TableSession';
 import { toTableSnapshot, type TableSnapshot } from './TableSnapshot';
 
 /**
- * 目前所在的牌桌房間。連線跨場景保留：Lobby 的房間大廳與 Table 場景共用同一個 RoomSession，
- * 切換場景期間收到的訊息由 RoomSession 暫存，Table 場景訂閱時補送。
+ * 目前所在的牌桌房間（連線房間或離線牌局）。跨場景保留：Lobby 的房間大廳與 Table 場景共用同一個 session，
+ * 切換場景期間收到的訊息由 session 暫存，Table 場景訂閱時補送。
  */
 class TableStore {
     readonly snapshot = new Observable<TableSnapshot | null>(null);
-    private current: RoomSession | null = null;
+    private current: TableSession | null = null;
     private unsubscribes: Unsubscribe[] = [];
 
-    get session(): RoomSession | null {
+    get session(): TableSession | null {
         return this.current;
     }
 
@@ -19,7 +19,7 @@ class TableStore {
         return this.current?.sessionId ?? '';
     }
 
-    attach(session: RoomSession): void {
+    attach(session: TableSession): void {
         this.detach();
         this.current = session;
         this.unsubscribes.push(session.onState((state) => (this.snapshot.value = toTableSnapshot(state))));

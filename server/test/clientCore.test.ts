@@ -228,6 +228,22 @@ describe('RoomSession', () => {
         expect(room.leave).toHaveBeenCalledWith(true);
     });
 
+    it('訂閱者拋出例外時，其他訂閱者照常收到，收到解散通知後仍立即離開', () => {
+        const room = fakeRoom();
+        const session = new RoomSession(room as never);
+        const error = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+        const notices: unknown[] = [];
+        session.on(ServerMessage.Notice, () => {
+            throw new Error('UI 出錯');
+        });
+        session.on(ServerMessage.Notice, (p) => notices.push(p.code));
+        room.receive(ServerMessage.Notice, { code: NoticeCode.RoomDissolved });
+        expect(notices).toEqual([NoticeCode.RoomDissolved]);
+        expect(session.connection.value).toBe('closed');
+        expect(error).toHaveBeenCalled();
+        error.mockRestore();
+    });
+
     it('伺服器沒有關閉連線時，leave() 逾時後由客戶端關閉', async () => {
         vi.useFakeTimers();
         try {

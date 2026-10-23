@@ -8,7 +8,7 @@ import android.app.Activity
 object NativeBridges {
     @JvmStatic
     fun onCreate(activity: Activity) {
-        ImmersiveBridge.attach(activity)
+        ImmersiveBridge.apply(activity)
         HapticsBridge.attach(activity.applicationContext)
         ShareBridge.attach(activity)
         NetworkMonitor.start(activity.applicationContext)
@@ -23,7 +23,7 @@ object NativeBridges {
 
     /** 回到前景時重新套用沉浸式（部分裝置在多工切換後會重新顯示系統列） */
     @JvmStatic
-    fun onResume() {
-        if (ImmersiveBridge.isImmersive()) ImmersiveBridge.setImmersive(true)
+    fun onResume(activity: Activity) {
+        ImmersiveBridge.apply(activity)
     }
 }

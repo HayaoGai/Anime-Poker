@@ -45,11 +45,7 @@ export class RoomItem extends Component {
         if (this.players) this.players.string = `${room.players} / ${room.maxPlayers}`;
         this.spectators?.setKey('lobby.spectators', { count: room.spectators });
 
-        const full = room.players >= room.maxPlayers;
-        if (this.joinButton) {
-            this.joinButton.interactable = !full;
-            const sprite = this.joinButton.getComponent(Sprite);
-            if (sprite) sprite.grayscale = full;
-        }
+        // 滿人時不能參賽（變暗由 ButtonFeedback 統一處理）
+        if (this.joinButton) this.joinButton.interactable = room.players < room.maxPlayers;
     }
 }

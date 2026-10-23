@@ -1,4 +1,4 @@
-import { _decorator, Button, Node, Sprite } from 'cc';
+import { _decorator, Button, Node } from 'cc';
 import { audio } from '../../core/AudioManager';
 import type { ReadonlyObservable } from '../../core/Observable';
 import { ViewBase } from '../../core/ViewBase';
@@ -81,8 +81,6 @@ export class WaitingRoomPanel extends ViewBase {
         if (this.startButton) {
             this.startButton.node.active = isHost;
             this.startButton.interactable = vm.canStart.value;
-            const sprite = this.startButton.getComponent(Sprite);
-            if (sprite) sprite.grayscale = !vm.canStart.value;
         }
         if (this.needPlayersHint) this.needPlayersHint.active = isHost && !vm.canStart.value;
         if (this.waitingHint) this.waitingHint.active = !isHost;

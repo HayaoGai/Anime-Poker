@@ -1,8 +1,8 @@
-import { FULL_DECK, type Card } from '@shared/cards';
-import type { LegalActions } from '@shared/events';
-import { ActionType, type PlayerAction } from '@shared/poker';
+import { FULL_DECK, type Card } from '../cards';
+import type { LegalActions } from '../events';
+import { ActionType, type PlayerAction } from '../poker';
 import { scoreHand } from './HandEvaluator';
-import { cryptoRng, type Rng } from './rng';
+import type { Rng } from './rng';
 
 export interface BotContext {
     hole: readonly Card[];
@@ -20,7 +20,7 @@ export interface BotContext {
 /**
  * 以 Monte Carlo 模擬估算勝率：隨機補齊對手底牌與剩餘公共牌，統計自己贏（平手按人數分）的比例。
  */
-export function estimateEquity(hole: readonly Card[], board: readonly Card[], opponents: number, iterations: number, rng: Rng = cryptoRng): number {
+export function estimateEquity(hole: readonly Card[], board: readonly Card[], opponents: number, iterations: number, rng: Rng): number {
     const known = new Set<Card>([...hole, ...board]);
     const remaining = FULL_DECK.filter((c) => !known.has(c));
     const needed = opponents * 2 + (5 - board.length);
@@ -56,7 +56,7 @@ export function estimateEquity(hole: readonly Card[], board: readonly Card[], op
  * 電腦玩家的決策：勝率對照底池賠率，加上少量隨機性（偶爾詐唬、加注大小浮動）。
  * 回傳的動作一定合法。
  */
-export function decideBotAction(ctx: BotContext, rng: Rng = cryptoRng): PlayerAction {
+export function decideBotAction(ctx: BotContext, rng: Rng): PlayerAction {
     const { legal } = ctx;
     // 對手越多單次模擬越貴，總計算量維持在相近範圍
     const iterations = Math.max(120, Math.round(480 / Math.max(1, ctx.opponents)));

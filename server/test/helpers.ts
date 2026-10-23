@@ -1,10 +1,10 @@
 import { FULL_DECK, type Card } from '@shared/cards';
 import { BIG_BLIND, SMALL_BLIND } from '@shared/rules';
-import { Deck } from '../src/engine/Deck';
+import { Deck } from '@shared/engine/Deck';
 import type { HandEvent } from '@shared/events';
-import { HandController, type HandSeat } from '../src/engine/HandController';
-import { seatsAfter } from '../src/engine/positions';
-import type { Rng } from '../src/engine/rng';
+import { HandController, type HandSeat } from '@shared/engine/HandController';
+import { seatsAfter } from '@shared/engine/positions';
+import type { Rng } from '@shared/engine/rng';
 
 /**
  * 依指定的底牌與公共牌排出牌堆，其餘位置以未使用的牌補齊。

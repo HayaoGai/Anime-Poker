@@ -19,6 +19,7 @@ const { ccclass, property, menu } = _decorator;
 
 /**
  * Lobby 場景：首次設定暱稱與頭像 → 房間列表 → 房間大廳；房主開始遊戲後進入 Table 場景。
+ * 離線對戰同樣進入房間大廳（自己是房主），之後的流程與連線房間相同。
  * 返回鍵：房間大廳 → 離開房間回到列表；列表 → 回到 Title。
  */
 @ccclass('LobbyView')
@@ -55,8 +56,12 @@ export class LobbyView extends ViewBase {
         const list = this.listPanel;
         if (list) {
             list.onCreate = () => void this.enter(() => this.lobby!.createRoom());
+            list.onOffline = () => void this.enter(async () => this.lobby!.playOffline());
             list.onJoin = (roomId, asSpectator) => void this.enter(() => this.lobby!.joinRoom(roomId, asSpectator));
-            list.onRetry = () => void this.lobby?.connect();
+            list.onRetry = () => {
+                void audio.playSfx('ui_click');
+                void this.lobby?.connect();
+            };
         }
         if (this.roomPanel) this.roomPanel.onLeave = () => void this.leaveRoom();
 

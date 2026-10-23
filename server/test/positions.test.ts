@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { blindSeats, nextButton, seatsAfter } from '../src/engine/positions';
+import { blindSeats, nextButton, seatsAfter } from '@shared/engine/positions';
 
 describe('seatsAfter', () => {
     it('從下一位開始順時針繞一圈，起點排最後', () => {

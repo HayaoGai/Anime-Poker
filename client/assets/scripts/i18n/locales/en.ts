@@ -28,6 +28,7 @@ export const en: Record<I18nKey, string> = {
 
     'lobby.roomList': 'Rooms',
     'lobby.createRoom': 'Create Room',
+    'lobby.playOffline': 'Play Offline',
     'lobby.roomName': "{host}'s Room",
     'lobby.statusLobby': 'Waiting',
     'lobby.statusPlaying': 'Playing',

@@ -1,7 +1,8 @@
-import type { Card } from '@shared/cards';
-import type { HandEvent, LegalActions, ShowdownResult } from '@shared/events';
-import { ErrorCode } from '@shared/errors';
-import { ActionKind, ActionType, Street, type HandCategory, type PlayerAction } from '@shared/poker';
+// ⚠️ 自動產生的檔案，請勿直接修改。來源：shared/src/engine/HandController.ts，執行 pnpm sync:shared 更新。
+import type { Card } from '../cards';
+import type { HandEvent, LegalActions, ShowdownResult } from '../events';
+import { ErrorCode } from '../errors';
+import { ActionKind, ActionType, Street, type HandCategory, type PlayerAction } from '../poker';
 import { BettingRound, type HandPlayer } from './BettingRound';
 import { Deck } from './Deck';
 import { evaluateBest, type HandValue } from './HandEvaluator';

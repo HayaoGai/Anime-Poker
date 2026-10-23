@@ -1,6 +1,6 @@
-import { ErrorCode } from '@shared/errors';
-import type { HandEvent, HandEventType } from '@shared/events';
-import { ActionType, type PlayerAction } from '@shared/poker';
+import { ErrorCode } from '../errors';
+import type { HandEvent, HandEventType } from '../events';
+import { ActionType, type PlayerAction } from '../poker';
 import {
     AVATAR_ID_PATTERN,
     ClientMessage,
@@ -13,16 +13,16 @@ import {
     type ClientPayloads,
     type RoomMetadata,
     type ServerPayloads,
-} from '@shared/protocol';
-import { ACTION_TIMEOUT_MS, BIG_BLIND, MAX_SEATS, MIN_PLAYERS_TO_START, SMALL_BLIND, STARTING_STACK } from '@shared/rules';
+} from '../protocol';
+import { ACTION_TIMEOUT_MS, BIG_BLIND, MAX_SEATS, MIN_PLAYERS_TO_START, SMALL_BLIND, STARTING_STACK } from '../rules';
 import { decideBotAction } from '../engine/BotAI';
 import { Deck } from '../engine/Deck';
 import { HandController } from '../engine/HandController';
 import { nextButton } from '../engine/positions';
-import { cryptoRng, type Rng } from '../engine/rng';
-import { createPokerState, type PokerState, type SeatState } from './schema';
+import type { Rng } from '../engine/rng';
+import type { SeatData, TableState } from './state';
 
-/** 由 PokerRoom 實作的輸出通道 */
+/** 輸出通道：伺服器由 PokerRoom 實作，離線模式由客戶端的 LocalTableSession 實作 */
 export interface TableOutput {
     broadcast<T extends ServerMessage>(type: T, payload: ServerPayloads[T]): void;
     send<T extends ServerMessage>(sessionId: string, type: T, payload: ServerPayloads[T]): void;
@@ -60,10 +60,12 @@ export const DEFAULT_PACING: Pacing = {
     gameOver: 6000,
 };
 
-export interface TableOptions {
+export interface TableOptions<S extends TableState = TableState> {
+    /** 牌桌狀態：伺服器傳入 Colyseus Schema，離線模式傳入一般物件 */
+    state: S;
     output: TableOutput;
     scheduler: Scheduler;
-    rng?: Rng;
+    rng: Rng;
     /** 測試可注入指定牌序 */
     createDeck?: () => Deck;
     pacing?: Pacing;
@@ -90,10 +92,11 @@ const BOT_NAMES = ['Sakura', 'Yuki', 'Hana', 'Rin', 'Mio', 'Aoi', 'Kaede', 'Nana
 
 /**
  * 一張牌桌的完整邏輯：成員與座位、房主、電腦、一手接一手的牌局、行動計時與事件播放節奏。
- * 不依賴 Colyseus，排程與輸出由外部注入，因此可以在測試中以手動時鐘精確驅動。
+ * 不依賴 Colyseus，狀態、排程、輸出與隨機來源由外部注入：伺服器與客戶端的離線模式共用，
+ * 也可以在測試中以手動時鐘精確驅動。
  */
-export class Table {
-    readonly state: PokerState = createPokerState();
+export class Table<S extends TableState = TableState> {
+    readonly state: S;
 
     private readonly output: TableOutput;
     private readonly scheduler: Scheduler;
@@ -118,10 +121,11 @@ export class Table {
     private stageTimer: Timer | null = null;
     private disposed = false;
 
-    constructor(options: TableOptions) {
+    constructor(options: TableOptions<S>) {
+        this.state = options.state;
         this.output = options.output;
         this.scheduler = options.scheduler;
-        this.rng = options.rng ?? cryptoRng;
+        this.rng = options.rng;
         this.createDeck = options.createDeck ?? (() => Deck.shuffled(this.rng));
         this.pacing = options.pacing ?? DEFAULT_PACING;
         this.botThinkMs = options.botThinkMs ?? [1000, 2500];
@@ -324,7 +328,7 @@ export class Table {
         }
     }
 
-    private occupySeat(seat: number, who: Pick<SeatState, 'sessionId' | 'isBot' | 'nickname' | 'avatarId'>): void {
+    private occupySeat(seat: number, who: Pick<SeatData, 'sessionId' | 'isBot' | 'nickname' | 'avatarId'>): void {
         const s = this.state.seats[seat];
         s.occupied = true;
         s.sessionId = who.sessionId;

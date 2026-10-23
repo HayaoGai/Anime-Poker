@@ -1,5 +1,6 @@
-import { FULL_DECK, type Card } from '@shared/cards';
-import { cryptoRng, type Rng } from './rng';
+// ⚠️ 自動產生的檔案，請勿直接修改。來源：shared/src/engine/Deck.ts，執行 pnpm sync:shared 更新。
+import { FULL_DECK, type Card } from '../cards';
+import type { Rng } from './rng';
 
 export class Deck {
     private readonly cards: Card[];
@@ -10,7 +11,7 @@ export class Deck {
     }
 
     /** 建立一副以 Fisher–Yates 洗好的新牌 */
-    static shuffled(rng: Rng = cryptoRng): Deck {
+    static shuffled(rng: Rng): Deck {
         return new Deck(fisherYates([...FULL_DECK], rng));
     }
 

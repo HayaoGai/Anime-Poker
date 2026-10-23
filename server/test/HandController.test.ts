@@ -2,9 +2,9 @@ import { ErrorCode } from '@shared/errors';
 import { ActionKind, ActionType, HandCategory, Street, type PlayerAction } from '@shared/poker';
 import { BIG_BLIND, SMALL_BLIND } from '@shared/rules';
 import { describe, expect, it } from 'vitest';
-import { Deck, fisherYates } from '../src/engine/Deck';
+import { Deck, fisherYates } from '@shared/engine/Deck';
 import type { HandEvent } from '@shared/events';
-import { HandController } from '../src/engine/HandController';
+import { HandController } from '@shared/engine/HandController';
 import { createHand, eventsOfType, seededRng, stackOf } from './helpers';
 
 const fold: PlayerAction = { type: ActionType.Fold };
@@ -39,7 +39,7 @@ describe('開局', () => {
     });
 
     it('拒絕少於兩人或籌碼為 0 的開局', () => {
-        const deck = Deck.shuffled();
+        const deck = Deck.shuffled(seededRng(1));
         expect(() => new HandController({ seats: [{ seat: 0, stack: 100 }], button: 0, smallBlind: 1, bigBlind: 2, deck })).toThrow();
         expect(
             () => new HandController({ seats: [{ seat: 0, stack: 100 }, { seat: 1, stack: 0 }], button: 0, smallBlind: 1, bigBlind: 2, deck }),

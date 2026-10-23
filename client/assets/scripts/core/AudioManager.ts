@@ -122,6 +122,9 @@ class AudioService {
             this.bgmSource = node.addComponent(AudioSource);
             this.sfxSource = node.addComponent(AudioSource);
             this.voiceSource = node.addComponent(AudioSource);
+            // 常駐節點在每次切換場景時都會重新 onEnable，playOnAwake（預設開啟）會把留著的 clip 再播一次
+            //（例如選擇頭像的人聲），播放一律由程式控制
+            for (const source of [this.bgmSource, this.sfxSource, this.voiceSource]) source.playOnAwake = false;
         }
         return { bgm: this.bgmSource, sfx: this.sfxSource!, voice: this.voiceSource! };
     }

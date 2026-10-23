@@ -1,11 +1,11 @@
 import { FULL_DECK } from '@shared/cards';
 import { describe, expect, it, vi } from 'vitest';
-import { Deck, fisherYates } from '../src/engine/Deck';
-import { cryptoRng } from '../src/engine/rng';
+import { Deck, fisherYates } from '@shared/engine/Deck';
+import { cryptoRng } from '../src/rng';
 
 describe('Deck', () => {
     it('洗好的牌有 52 張且不重複', () => {
-        const deck = Deck.shuffled();
+        const deck = Deck.shuffled(cryptoRng);
         const cards = deck.drawMany(52);
         expect(new Set(cards).size).toBe(52);
         expect(new Set(cards)).toEqual(new Set(FULL_DECK));

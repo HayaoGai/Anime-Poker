@@ -28,6 +28,7 @@ export const zhHans: Record<I18nKey, string> = {
 
     'lobby.roomList': '房间列表',
     'lobby.createRoom': '创建房间',
+    'lobby.playOffline': '离线对战',
     'lobby.roomName': '{host} 的房间',
     'lobby.statusLobby': '大厅',
     'lobby.statusPlaying': '游戏中',

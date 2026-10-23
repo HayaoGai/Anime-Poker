@@ -1,6 +1,7 @@
-import type { ActionRecord, LegalActions } from '@shared/events';
-import { ErrorCode } from '@shared/errors';
-import { ActionKind, ActionType, type PlayerAction } from '@shared/poker';
+// ⚠️ 自動產生的檔案，請勿直接修改。來源：shared/src/engine/BettingRound.ts，執行 pnpm sync:shared 更新。
+import type { ActionRecord, LegalActions } from '../events';
+import { ErrorCode } from '../errors';
+import { ActionKind, ActionType, type PlayerAction } from '../poker';
 
 /** 一位玩家在這手牌中的籌碼狀態，由 HandController 擁有、BettingRound 直接修改 */
 export interface HandPlayer {

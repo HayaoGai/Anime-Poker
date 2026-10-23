@@ -1,8 +1,7 @@
 import { Observable, type Unsubscribe } from '../core/Observable';
 import { ClientMessage, NoticeCode, ServerMessage, type ClientPayloads, type ServerPayloads } from '../shared/protocol';
+import { MessageHub, type ConnectionState, type TableSession } from './TableSession';
 import { TimeSync } from './TimeSync';
-
-export type ConnectionState = 'connected' | 'reconnecting' | 'closed';
 
 const TIME_SYNC_INTERVAL_MS = 30_000;
 const TIME_SYNC_BURST = 4;
@@ -33,16 +32,14 @@ export function leaveRoom(room: Colyseus.Room): Promise<void> {
 /**
  * 包裝一個 Colyseus 房間：帶型別的收發、連線狀態、伺服器時間校正。
  *
- * SDK 會丟棄「尚未註冊類型」的訊息，因此建立時立刻以 '*' 接收所有訊息；
- * 某類型還沒有人訂閱時先暫存，第一個訂閱者出現時補送（例如重連後馬上送達的底牌）。
+ * SDK 會丟棄「尚未註冊類型」的訊息，因此建立時立刻以 '*' 接收所有訊息，交給 MessageHub 分派或暫存。
  */
-export class RoomSession<State = unknown> {
+export class RoomSession<State = unknown> implements TableSession {
     readonly connection = new Observable<ConnectionState>('connected');
     readonly timeSync = new TimeSync();
     readonly room: Colyseus.Room<State>;
 
-    private readonly listeners = new Map<string, Set<(payload: unknown) => void>>();
-    private readonly pending = new Map<string, unknown[]>();
+    private readonly hub = new MessageHub();
     private timeSyncTimer: ReturnType<typeof setInterval> | null = null;
 
     constructor(room: Colyseus.Room<State>, options: { timeSync?: boolean } = {}) {
@@ -75,16 +72,7 @@ export class RoomSession<State = unknown> {
     }
 
     on<T extends ServerMessage>(type: T, listener: (payload: ServerPayloads[T]) => void): Unsubscribe {
-        let set = this.listeners.get(type);
-        if (!set) this.listeners.set(type, (set = new Set()));
-        set.add(listener as (payload: unknown) => void);
-
-        const queued = this.pending.get(type);
-        if (queued) {
-            this.pending.delete(type);
-            for (const payload of queued) listener(payload as ServerPayloads[T]);
-        }
-        return () => set!.delete(listener as (payload: unknown) => void);
+        return this.hub.on(type, listener);
     }
 
     /** 自訂訊息以外的狀態同步（每次 patch 後呼叫） */
@@ -112,24 +100,11 @@ export class RoomSession<State = unknown> {
     }
 
     private dispatch(type: string, payload: unknown): void {
-        this.deliver(type, payload);
+        this.hub.deliver(type, payload);
         // 房間解散：通知送達後立即結束這個連線，不等伺服器關閉（見 leaveRoom）
         if (type === ServerMessage.Notice && (payload as ServerPayloads[typeof ServerMessage.Notice]).code === NoticeCode.RoomDissolved) {
             void this.leave();
         }
-    }
-
-    private deliver(type: string, payload: unknown): void {
-        const set = this.listeners.get(type);
-        if (set && set.size) {
-            for (const listener of [...set]) listener(payload);
-            return;
-        }
-        const queue = this.pending.get(type) ?? [];
-        // 只保留最近幾則，避免長時間沒人訂閱的類型無限累積
-        queue.push(payload);
-        if (queue.length > 20) queue.shift();
-        this.pending.set(type, queue);
     }
 
     private close(): void {

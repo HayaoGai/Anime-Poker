@@ -2,6 +2,7 @@ import { Observable } from '../core/Observable';
 import { ViewModel } from '../core/ViewModel';
 import { tableStore } from '../models/TableStore';
 import { gameClient, type ClientErrorCode } from '../net/GameClient';
+import { LocalTableSession } from '../net/LocalTableSession';
 import { leaveRoom } from '../net/RoomSession';
 import { RoomName } from '../shared/constants';
 import { RoomPhase, type RoomMetadata } from '../shared/protocol';
@@ -70,6 +71,15 @@ export class LobbyViewModel extends ViewModel {
 
     joinRoom(roomId: string, asSpectator: boolean): Promise<ClientErrorCode | null> {
         return this.enter(() => gameClient.joinTable(roomId, asSpectator));
+    }
+
+    /** 離線對戰：在本機開一桌，只有自己與電腦，不需要連線；失敗時回傳錯誤碼 */
+    playOffline(): ClientErrorCode | null {
+        if (this.busy.value) return null;
+        const session = LocalTableSession.create(gameClient.joinOptions(false));
+        if (typeof session === 'string') return session;
+        tableStore.attach(session);
+        return null;
     }
 
     dispose(): void {

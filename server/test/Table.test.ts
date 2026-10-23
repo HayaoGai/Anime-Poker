@@ -4,7 +4,7 @@ import { ActionType } from '@shared/poker';
 import { ClientMessage, NoticeCode, RoomPhase, ServerMessage } from '@shared/protocol';
 import { STARTING_STACK } from '@shared/rules';
 import { describe, expect, it } from 'vitest';
-import type { Table } from '../src/rooms/Table';
+import type { Table } from '@shared/table/Table';
 import { riggedDeck, seededRng } from './helpers';
 import { createTable, player, type ManualScheduler } from './tableHarness';
 

@@ -4,7 +4,7 @@ import { RoomName } from '@shared/constants';
 import { ClientMessage, NoticeCode, RoomPhase, ServerMessage, type RoomMetadata } from '@shared/protocol';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { createServer } from '../src/app';
-import { DEFAULT_PACING, type Pacing } from '../src/rooms/Table';
+import { DEFAULT_PACING, type Pacing } from '@shared/table/Table';
 import { pokerRoomOverrides } from '../src/rooms/PokerRoom';
 
 const PORT = 25_000 + Math.floor(performance.now() % 1000);

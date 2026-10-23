@@ -1,5 +1,6 @@
-import { rankOf, rankValue, suitOf, type Card } from '@shared/cards';
-import { HandCategory } from '@shared/poker';
+// ⚠️ 自動產生的檔案，請勿直接修改。來源：shared/src/engine/HandEvaluator.ts，執行 pnpm sync:shared 更新。
+import { rankOf, rankValue, suitOf, type Card } from '../cards';
+import { HandCategory } from '../poker';
 
 export interface HandValue {
     category: HandCategory;

@@ -30,6 +30,7 @@ export const zhHant = {
 
     'lobby.roomList': '房間列表',
     'lobby.createRoom': '建立房間',
+    'lobby.playOffline': '離線對戰',
     'lobby.roomName': '{host} 的房間',
     'lobby.statusLobby': '大廳',
     'lobby.statusPlaying': '遊戲中',
