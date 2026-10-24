@@ -1,32 +1,53 @@
 # Anime Poker
 
+![Anime Poker 標題畫面](docs/screenshots/title.webp)
+
 動漫美少女風格的多人德州撲克（No-Limit Texas Hold'em），支援 **Web（桌機／手機瀏覽器）** 與 **Android**。
 
 - 用戶端：Cocos Creator 3.8.8 + TypeScript，MVVM 架構，以實際的 Scene 與 Prefab 製作。
 - 伺服器：Node.js + TypeScript + Colyseus，由伺服器決定一切結果（server-authoritative）。
 - Android 原生層：Java + Kotlin，透過 Cocos 的 JSB 橋接與遊戲互通。
 
+## 遊戲畫面
+
+一場完整的對局流程（Android 實機截圖）：
+
+| ① 設定角色 | ② 房間大廳 |
+|---|---|
+| ![設定暱稱與頭像](docs/screenshots/profile.webp) | ![房主加入電腦玩家](docs/screenshots/room.webp) |
+| 第一次進入時設定暱稱與頭像，存在 localStorage，不需要登入。 | 房主可加入電腦玩家（以蒙地卡羅模擬估算勝率的 BotAI），最少 2 人即可開局。 |
+| **③ 牌局進行** | **④ 比賽結束** |
+| ![牌桌：翻牌圈輪到自己行動](docs/screenshots/table.webp) | ![勝利橫幅與粒子特效](docs/screenshots/victory.webp) |
+| 沿名牌外框的倒數計時、目前牌型提示、依情境切換的行動按鈕；其他玩家的底牌在攤牌前不會送到用戶端。 | 畫面停在最後一手，勝利橫幅（AnimationClip）搭配彩帶與愛心粒子，可分享戰績或返回大廳。 |
+| **⑤ 分享戰績** | **製作人員** |
+| ![Android 系統分享面板](docs/screenshots/share.webp) | ![製作人員彈窗](docs/screenshots/credits.webp) |
+| 截圖後經 Kotlin `ShareBridge`（FileProvider）呼叫系統分享面板；Web 版改用 Web Share API。 | 標題畫面的製作人員彈窗，版本號由 commit subject 自動帶入。 |
+
 ## 功能
 
 **遊戲流程**
-- **Title**：點按任意處開始、製作人員彈窗、語系切換（繁中／简中／English）、全螢幕切換、返回鍵退出確認。
+- **Title**：點按任意處開始、製作人員彈窗、語系切換（繁中／简中／English）、返回鍵退出確認。Web 版可切換全螢幕，Android 版固定為沉浸式全螢幕。
 - **Lobby**：
   - 第一次進入時設定暱稱與頭像，存在 localStorage，不需要登入。
   - 房間列表即時更新，可建立、加入或觀戰。
-  - 房主可以加入電腦玩家。
+  - 房主可以加入電腦玩家，電腦會優先使用牌桌上還沒有人用的頭像。
+  - **離線對戰**：不需要連線，在本機和 3 位電腦對打，使用和伺服器相同的牌局邏輯。
 - **Table**：
   - 最多 6 人，盲注固定為 1/2，每位玩家以 100 BB 開始，畫面上的籌碼以 BB 顯示。
   - 每回合 10 秒，逾時自動過牌或棄牌。加注介面提供滑桿與 Min／½ Pot／Pot／All-in 快捷鍵。
-  - 籌碼輸光就轉為觀戰，比賽結束後回到房間大廳。贏家可以分享戰績截圖。
+  - 自己的底牌上方會提示目前牌型。
+  - 左上角的選單（或返回鍵、Esc）開啟暫停選單：音樂、音效、人聲開關，以及改為觀戰、退出牌桌。離線對戰時開啟選單會暫停牌局。
+  - 籌碼輸光就轉為觀戰。比賽結束後畫面停在最後一手並顯示結算橫幅，贏家可以分享戰績截圖，所有人自行按「返回大廳」離開。
   - 斷線後有 20 秒可重新連線。
 
 **動畫與特效**
 - 發牌、翻牌、籌碼下注與收池（貝茲曲線飛行）。
-- 倒數計時環、攤牌時標亮最佳五張、贏家光暈。
+- 沿名牌外框的倒數計時（綠→黃→紅）、攤牌時只標亮構成牌型的牌、贏家光暈。
 - 勝利橫幅（AnimationClip），以及金幣、彩帶、愛心粒子。
+- 標題與牌桌各有背景音樂，切換場景時不中斷；啟動時由黑畫面淡入。
 
 **公平性**
-- 洗牌使用 `crypto.randomInt` 搭配 Fisher–Yates。
+- 線上對戰的洗牌使用 `crypto.randomInt` 搭配 Fisher–Yates；伺服器與 shared 程式碼禁用 `Math.random`，由測試檢查。
 - 攤牌前，其他玩家的底牌不會送到用戶端。
 - 用戶端只送出「想做的行動」，合法性、計時與結算都由伺服器處理。
 
@@ -37,25 +58,34 @@
 ## 架構
 
 ```
-┌──────────── client（Cocos Creator）────────────┐        ┌────────── server（Colyseus）──────────┐
-│ View ─ bind ─ ViewModel ─ Model（TableStore）  │  ws    │ LobbyRoom   房間列表（即時更新）       │
-│   │                         │                   │◄──────►│ PokerRoom   房間大廳／牌局             │
-│ Prefab / Scene        RoomSession（Colyseus SDK）│        │   └ Table   純邏輯（可注入計時與輸出）  │
-│ INativeBridge ── WebBridge │ AndroidBridge       │        │       └ engine  Deck、HandEvaluator、 │
-└──────────────────────────────┼──────────────────┘        │                 BettingRound、PotManager│
-                               │ JSB                       │                 、BotAI（蒙地卡羅）     │
-                 Android 原生層（Java + Kotlin）           └────────────────────────────────────────┘
-                         shared/（規則常數、協定、事件型別）由用戶端與伺服器共用
+用戶端（Cocos Creator）
+  View ─ bind ─ ViewModel ─ Model（TableStore）
+                               │
+                         TableSession
+               ┌───────────────┴───────────────┐
+       LocalTableSession                  RoomSession        ← 離線對戰／線上對戰（Colyseus SDK）
+               │                               │ ws
+               │                           PokerRoom         ← 伺服器（Colyseus），另有 LobbyRoom 提供房間列表
+               │                               │
+               └──────────► Table ◄────────────┘             ← shared：兩種模式共用同一份牌局邏輯
+                              └ engine                       Deck、HandEvaluator、BettingRound、PotManager、BotAI
+
+INativeBridge ─┬─ WebBridge
+               └─ AndroidBridge ── JSB ── Android 原生層（Java + Kotlin）
 ```
 
-- **shared**：規則常數、訊息協定、事件型別。用戶端用的副本由 `pnpm sync:shared` 複製到 `client/assets/scripts/shared`。
+- **shared**：
+  - 規則常數、訊息協定、事件型別，以及牌局引擎（`engine`）與 `Table`。
+  - `Table` 不依賴 Colyseus，計時器、輸出、隨機來源與狀態物件都以注入方式提供，可以直接寫單元測試。
+  - BotAI 以蒙地卡羅模擬估算勝率來決定行動。
+  - 用戶端用的副本由 `pnpm sync:shared` 複製到 `client/assets/scripts/shared`。
 - **伺服器**：
-  - `Table` 不依賴 Colyseus，計時器與輸出都以注入方式提供，可以直接寫單元測試。
-  - `PokerRoom` 只負責把 `Table` 接到 Colyseus。
+  - `PokerRoom` 只負責把 `Table` 接到 Colyseus，注入 `crypto.randomInt` 與 Colyseus Schema 狀態。
   - 牌局事件依固定節奏依序播放，讓用戶端的動畫有足夠時間演出。
 - **用戶端**：
   - `Observable`／`ViewModel`／`ViewBase` 組成輕量的 MVVM。
-  - 動畫由兩種來源驅動：狀態快照的差異，以及伺服器送來的牌局事件。
+  - `RoomSession`（線上）與 `LocalTableSession`（離線，在本機執行 `Table`）實作同一個 `TableSession` 介面，房間大廳與牌桌不需要區分是否連線。
+  - 動畫由兩種來源驅動：狀態快照的差異，以及牌局事件。
 
 ## 專案結構
 
@@ -64,10 +94,11 @@ client/                 Cocos Creator 專案
   assets/scenes/        Title、Lobby、Table
   assets/prefabs/       彈窗、房間列表項目、Toast 等
   assets/scripts/       app、core（MVVM、音效、彈窗…）、i18n、models、net、native、viewmodels、views
-  assets/resources/     圖片、音效（以 tools/gen-art、gen-sfx 產生）
+  assets/resources/     圖片、音效、背景音樂、人聲、字型
   native/engine/android Android 原生專案（Java + Kotlin 橋接模組）
 server/                 Colyseus 伺服器與測試（vitest）
-shared/                 用戶端與伺服器共用的型別與常數
+shared/                 用戶端與伺服器共用的規則、協定、牌局引擎與 Table
+docs/screenshots/       README 使用的遊戲截圖
 tools/                  素材產生器，以及建置與發佈指令
 render.yaml             Render 部署設定
 ```
@@ -114,6 +145,7 @@ pnpm typecheck         # 伺服器 + 用戶端型別檢查
 
 - 版號只有一個來源：最新一筆 commit subject 中的 `vX.Y.Z`。Web 的 `version.json`、APK 的 versionName 與 release tag 都從這裡取得。
 - APK 不進 git，只透過 GitHub Releases 發佈。
+- APK 只打包 arm64-v8a，原生庫在 APK 內壓縮存放，安裝包約 21 MB。
 - 一次性的設定：
   - 在 Render 以 Blueprint 建立服務。
   - `pnpm wrangler login`。
@@ -130,7 +162,7 @@ TypeScript 端統一使用 `INativeBridge` 介面，Web 與 Android 各有一份
 
 | 功能 | 原生實作 | Web 做法 |
 |---|---|---|
-| 沉浸式全螢幕 | Kotlin `ImmersiveBridge` | Fullscreen API |
+| 全螢幕 | Kotlin `ImmersiveBridge`（固定為沉浸式） | Fullscreen API（可切換） |
 | 震動回饋 | Kotlin `HapticsBridge` | `navigator.vibrate` |
 | 網路狀態監聽 | Kotlin `NetworkMonitor` | `online`／`offline` 事件 |
 | App 版本 | Java `AppActivity.getAppVersion` | 建置時寫入的 `version.json` |
@@ -145,9 +177,9 @@ TypeScript 端統一使用 `INativeBridge` 介面，Web 與 Android 各有一份
 
 ## 素材
 
-- 圖片與音效都由 `tools/` 下的產生器製作，可以重現。
+- 牌面、籌碼、圖示、UI 元件與粒子由 `pnpm gen:art` 產生，音效由 `pnpm gen:sfx` 合成，都可以重現。
+- 角色頭像與立繪、標題與牌桌背景是另外製作的插圖，放在 `client/assets/resources/textures/`。
 - 產生圖片時使用的字型為 Fredoka（SIL Open Font License，見 `tools/gen-art/fonts/OFL.txt`）。
 - 遊戲內文字使用 Resource Han Rounded（SIL Open Font License，見 `client/assets/resources/fonts/OFL.txt`）。只收錄常用字與介面文字的子集；簡體中文用 CN 字形，繁體中文與英文用 TW 字形。
-- 人聲與背景音樂已預留位置，放入對應的檔案就會自動播放，缺少的檔案會被略過：
-  - 人聲依玩家的頭像播放：`client/assets/resources/audio/voice/<頭像 id>/<check|bet|call|raise|fold|allIn>`
-  - 背景音樂：`client/assets/resources/audio/bgm/<room|room_list|table>`
+- 背景音樂：標題與大廳為 Percy Doe 的〈Chilling〉，牌桌為 Trio712 的〈A Garden In A Dream〉，放在 `client/assets/resources/audio/bgm/<title|table>`。
+- 人聲依玩家的頭像播放：`client/assets/resources/audio/voice/<頭像 id>/<check|bet|call|raise|fold|allIn|select>`，缺少的檔案會被略過。
