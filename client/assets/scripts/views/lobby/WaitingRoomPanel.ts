@@ -1,4 +1,5 @@
 import { _decorator, Button, Node } from 'cc';
+import { preloadAvatarForTable } from '../../app/Preload';
 import { audio } from '../../core/AudioManager';
 import type { ReadonlyObservable } from '../../core/Observable';
 import { ViewBase } from '../../core/ViewBase';
@@ -70,6 +71,8 @@ export class WaitingRoomPanel extends ViewBase {
         const isHost = vm.isHost.value;
         this.seats.forEach((slot, index) => {
             const seat = vm.seats.value[index];
+            // 已入座玩家的牌桌素材優先載入
+            if (seat?.occupied) preloadAvatarForTable(seat.avatarId, true);
             slot.show(seat, {
                 isHost: !!seat?.occupied && seat.sessionId === hostId,
                 isMe: !!seat?.occupied && seat.sessionId === tableStore.sessionId,

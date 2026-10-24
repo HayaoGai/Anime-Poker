@@ -1,4 +1,5 @@
 import { _decorator, Button, Color, Component, director, EventKeyboard, input, Input, KeyCode, Node, Prefab } from 'cc';
+import { preloadForLobby } from '../../app/Preload';
 import { audio } from '../../core/AudioManager';
 import { backKey } from '../../core/BackKey';
 import { popups } from '../../core/PopupManager';
@@ -49,6 +50,7 @@ export class TitleView extends Component {
         this.removeBackHandler = backKey.push(() => this.onBack());
         void audio.playBgm('title');
         director.preloadScene(this.nextScene);
+        preloadForLobby();
         if (!launched) {
             launched = true;
             // 淡入期間黑幕擋住點按，按鍵由 fading 擋住

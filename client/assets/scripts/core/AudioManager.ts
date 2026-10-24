@@ -6,26 +6,32 @@ import { loadResource } from './ResourceCache';
 import { storage } from './Storage';
 
 /** 與 tools/gen-sfx 產生的檔名一致 */
-export type SfxName =
-    | 'ui_click'
-    | 'ui_open'
-    | 'ui_close'
-    | 'notice'
-    | 'card_deal'
-    | 'card_flip'
-    | 'card_shuffle'
-    | 'card_reveal'
-    | 'chip_bet'
-    | 'chip_collect'
-    | 'chip_win'
-    | 'check'
-    | 'fold'
-    | 'all_in'
-    | 'your_turn'
-    | 'timer_tick'
-    | 'timer_warning'
-    | 'win'
-    | 'lose';
+export const SFX_NAMES = [
+    'ui_click',
+    'ui_open',
+    'ui_close',
+    'notice',
+    'card_deal',
+    'card_flip',
+    'card_shuffle',
+    'card_reveal',
+    'chip_bet',
+    'chip_collect',
+    'chip_win',
+    'check',
+    'fold',
+    'all_in',
+    'your_turn',
+    'timer_tick',
+    'timer_warning',
+    'win',
+    'lose',
+] as const;
+export type SfxName = (typeof SFX_NAMES)[number];
+
+export function sfxPath(name: SfxName): string {
+    return `audio/sfx/${name}`;
+}
 
 /** 背景音樂（使用者提供）：標題與大廳共用、牌桌 */
 export type BgmName = 'title' | 'table';
@@ -75,7 +81,7 @@ class AudioService {
 
     async playSfx(name: SfxName, volumeScale = 1): Promise<void> {
         if (!this.sfxEnabled.value) return;
-        const clip = await loadResource(`audio/sfx/${name}`, AudioClip);
+        const clip = await loadResource(sfxPath(name), AudioClip);
         if (clip && this.sfxEnabled.value) this.sources().sfx.playOneShot(clip, this.sfxVolume.value * volumeScale);
     }
 

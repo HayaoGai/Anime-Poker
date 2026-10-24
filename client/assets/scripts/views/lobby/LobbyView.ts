@@ -1,4 +1,5 @@
 import { _decorator, director, Node, Prefab } from 'cc';
+import { preloadForLobby, preloadForTable } from '../../app/Preload';
 import { audio } from '../../core/AudioManager';
 import { backKey } from '../../core/BackKey';
 import { popups } from '../../core/PopupManager';
@@ -74,6 +75,9 @@ export class LobbyView extends ViewBase {
     protected start(): void {
         // 延續標題畫面的背景音樂；從 Table 場景回來時重新播放
         void audio.playBgm('title');
+        // 在大廳停留期間先把牌桌的素材載好；直接從 Lobby 開始預覽時，大廳本身的素材也一併排入
+        preloadForLobby();
+        preloadForTable();
         // 首次進入：必須先設定暱稱與頭像
         if (!profile.isComplete.value) {
             void this.editProfile(true).then(() => this.afterProfileReady());
