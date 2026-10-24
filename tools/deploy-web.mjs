@@ -8,7 +8,7 @@
 //   1. pnpm wrangler login（一次性）
 //   2. Cocos Creator 3.8.8 安裝在預設路徑，或以環境變數 COCOS_CREATOR 指定 CocosCreator.exe
 //   3. 執行時 Cocos 編輯器不能開著這個專案
-import { existsSync, writeFileSync } from 'node:fs';
+import { existsSync, readdirSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import { CLIENT_DIR, ROOT, ensureCleanTree, fail, firstExisting, getVersion, git, info, parseArgs, run, success } from './lib/common.mjs';
 import { wrangler, wranglerCapture } from './lib/wrangler.mjs';
@@ -65,6 +65,16 @@ writeFileSync(
     JSON.stringify({ version, commit: commitHash, builtAt: new Date().toISOString() }, null, 2),
 );
 
+// Cloudflare Pages 的快取標頭。md5Cache 讓檔名帶有內容雜湊（例如 cc.3a6f8.js），內容一變檔名就變，
+// 因此這些檔案可以讓瀏覽器永久快取，再次進入遊戲時不必逐一回伺服器確認（Pages 預設 max-age=0）。
+// 沒有雜湊的檔案（index.html、version.json、src/effect.bin 等）維持預設，每次重新驗證。
+const headers = immutableRules(OUTPUT_DIR, '')
+    .map((rule) => `${rule}\n  Cache-Control: public, max-age=31536000, immutable\n`)
+    .join('');
+// Pages 的 _headers 最多 100 條規則
+if (headers.split('\n').filter((line) => line.startsWith('/')).length > 100) fail('_headers 超過 100 條規則');
+writeFileSync(path.join(OUTPUT_DIR, '_headers'), headers);
+
 // ---- 2. 上傳 ----
 const projects = wranglerCapture('pages', 'project', 'list');
 if (projects === null) fail('無法取得 Cloudflare Pages 專案列表，請先執行 pnpm wrangler login');
@@ -88,3 +98,27 @@ const code = wrangler(
 if (code !== 0) fail('上傳失敗');
 
 success(`v${version} 已部署到 https://${PAGES_PROJECT}.pages.dev`);
+
+/**
+ * 名稱帶有 md5Cache 雜湊：檔案如 index.e888b.js、0b0f7a282.c7c7d.json；
+ * 字型等保留原檔名的資源則是目錄帶雜湊，如 d904dd37-….031ff/rounded_tw.ttf
+ */
+function isHashed(name) {
+    return /\.[0-9a-f]{5}(\.[a-z0-9]+)?$/i.test(name);
+}
+
+function allHashed(dir) {
+    return readdirSync(dir, { withFileTypes: true }).every(
+        (entry) => isHashed(entry.name) || (entry.isDirectory() && allHashed(path.join(dir, entry.name))),
+    );
+}
+
+/** 可永久快取的路徑規則：整個目錄都帶雜湊時用 /dir/*，否則逐一列出帶雜湊的檔案 */
+function immutableRules(dir, url) {
+    if (url && allHashed(dir)) return [`${url}/*`];
+    return readdirSync(dir, { withFileTypes: true }).flatMap((entry) => {
+        const child = `${url}/${entry.name}`;
+        if (entry.isDirectory()) return isHashed(entry.name) ? [`${child}/*`] : immutableRules(path.join(dir, entry.name), child);
+        return isHashed(entry.name) ? [child] : [];
+    });
+}
