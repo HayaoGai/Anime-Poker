@@ -19,6 +19,7 @@
     "gen:sfx": "node tools/gen-sfx/index.mjs",
     "gen:icon": "node tools/gen-icon.mjs",
     "gen:fonts": "python tools/gen-fonts/subset.py",
+    "compress:bgm": "node tools/compress-bgm.mjs",
     "deploy:web": "node tools/deploy-web.mjs",
     "build:android": "node tools/build-android.mjs",
     "release:apk": "node tools/release-apk.mjs"

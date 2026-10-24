@@ -1,6 +1,6 @@
 import { AudioClip, director, resources, SpriteFrame } from 'cc';
 import { AVATARS, avatarById, AvatarVariant, VOICE_ACTIONS } from '../config/Avatars';
-import { SFX_NAMES, sfxPath, type SfxName } from '../core/AudioManager';
+import { bgmPath, SFX_NAMES, sfxPath, type SfxName } from '../core/AudioManager';
 import { preloadResources } from '../core/ResourceCache';
 
 // 素材預載的時程：在前一個場景就把下一個場景會用到的素材排入背景佇列（依使用的先後排序），
@@ -19,13 +19,15 @@ export function preloadForLobby(): void {
     }
 }
 
-/** 大廳：牌桌場景、牌面與籌碼、其餘音效，以及所有頭像的座位圖與行動人聲 */
+/** 大廳：牌桌場景、牌面與籌碼、其餘音效、所有頭像的座位圖與行動人聲，最後是牌桌 BGM */
 export function preloadForTable(): void {
     director.preloadScene('Table');
     resources.preloadDir('textures/cards', SpriteFrame);
     resources.preloadDir('textures/chips', SpriteFrame);
     preloadResources(SFX_NAMES.map(sfxPath), AudioClip);
     for (const avatar of AVATARS) preloadAvatarForTable(avatar.id);
+    // 牌桌 BGM 是最大的檔案（數 MB），排在最後，不與人聲、圖片搶頻寬
+    preloadResources([bgmPath('table')], AudioClip);
 }
 
 /** 牌桌座位圖與行動人聲；urgent 用於已入座的頭像，排到佇列最前面 */

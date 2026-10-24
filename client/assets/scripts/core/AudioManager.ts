@@ -36,6 +36,10 @@ export function sfxPath(name: SfxName): string {
 /** 背景音樂（使用者提供）：標題與大廳共用、牌桌 */
 export type BgmName = 'title' | 'table';
 
+export function bgmPath(name: BgmName): string {
+    return `audio/bgm/${name}`;
+}
+
 /** 牌局行動對應的人聲；all-in 優先 */
 export function voiceActionFor(kind: ActionKind, allIn: boolean): Exclude<VoiceAction, 'select'> {
     return allIn ? 'allIn' : kind;
@@ -122,7 +126,7 @@ class AudioService {
         bgm.stop();
         if (!name) return;
 
-        const clip = await loadResource(`audio/bgm/${name}`, AudioClip);
+        const clip = await loadResource(bgmPath(name), AudioClip);
         // 載入期間又切換了曲目，就不播放這首
         if (!clip || this.currentBgm !== name) return;
         bgm.clip = clip;

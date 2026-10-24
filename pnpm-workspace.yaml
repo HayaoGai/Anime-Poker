@@ -5,6 +5,7 @@ packages:
 # pnpm 預設不執行依賴的 install script，只放行確實需要的套件
 allowBuilds:
   esbuild: true          # 伺服器打包：安裝時驗證平台對應的原生 binary
+  ffmpeg-static: true    # BGM 壓縮：安裝時下載平台對應的 ffmpeg
   msgpackr-extract: true # Colyseus 訊息序列化的原生加速
   workerd: true          # wrangler 的本機執行環境
 
