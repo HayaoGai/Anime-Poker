@@ -1,16 +1,21 @@
-import { _decorator, Button, Component, director, EventKeyboard, input, Input, KeyCode, Node, Prefab } from 'cc';
+import { _decorator, Button, Color, Component, director, EventKeyboard, input, Input, KeyCode, Node, Prefab } from 'cc';
 import { audio } from '../../core/AudioManager';
 import { backKey } from '../../core/BackKey';
 import { popups } from '../../core/PopupManager';
+import { ScreenFade } from '../../core/ScreenFade';
 import { nativeBridge } from '../../native/NativeBridge';
 import { ConfirmPopup } from '../common/ConfirmPopup';
 
 const { ccclass, property, menu } = _decorator;
 
+/** 只有遊戲啟動時第一次進入標題畫面才淡入；從大廳返回時不淡入 */
+let launched = false;
+
 /**
  * 標題畫面：點按畫面任一處（或桌機按任一鍵）進入房間列表。
  * 製作人員、語系、全螢幕按鈕位於點按區域之上，點按它們不會觸發開始。
  * Android 返回鍵：跳出「是否退出遊戲」確認。
+ * 遊戲啟動時畫面由黑淡入，淡入期間不接受點按與按鍵。
  */
 @ccclass('TitleView')
 @menu('AnimePoker/TitleView')
@@ -30,7 +35,11 @@ export class TitleView extends Component {
     @property({ tooltip: '下一個場景' })
     nextScene = 'Lobby';
 
+    @property({ tooltip: '遊戲啟動時由黑淡入的秒數' })
+    fadeInDuration = 0.8;
+
     private started = false;
+    private fading = false;
     private removeBackHandler: (() => void) | null = null;
 
     protected onLoad(): void {
@@ -38,8 +47,14 @@ export class TitleView extends Component {
         this.creditsButton?.node.on(Button.EventType.CLICK, this.openCredits, this);
         input.on(Input.EventType.KEY_DOWN, this.onKeyDown, this);
         this.removeBackHandler = backKey.push(() => this.onBack());
-        void audio.playBgm(null);
+        void audio.playBgm('title');
         director.preloadScene(this.nextScene);
+        if (!launched) {
+            launched = true;
+            // 淡入期間黑幕擋住點按，按鍵由 fading 擋住
+            this.fading = true;
+            void ScreenFade.show(Color.BLACK, this.fadeInDuration, { blockInput: true }).then(() => (this.fading = false));
+        }
     }
 
     protected onDestroy(): void {
@@ -55,7 +70,7 @@ export class TitleView extends Component {
     }
 
     private start_(): void {
-        if (this.started || popups.count > 0) return;
+        if (this.started || this.fading || popups.count > 0) return;
         this.started = true;
         void audio.playSfx('ui_click');
         setTimeout(() => director.loadScene(this.nextScene), 500);

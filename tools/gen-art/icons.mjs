@@ -12,6 +12,7 @@ const ICONS = {
     fullscreen_enter: `<path d="M24 50 V24 H50 M78 24 H104 V50 M104 78 V104 H78 M50 104 H24 V78" ${S()}/>`,
     fullscreen_exit: `<path d="M50 24 V50 H24 M104 50 H78 V24 M78 104 V78 H104 M24 78 H50 V104" ${S()}/>`,
     language: `<circle cx="64" cy="64" r="40" ${S()}/><path d="M24 64 H104 M64 24 C46 44 46 84 64 104 M64 24 C82 44 82 84 64 104" ${S(8)}/>`,
+    menu: `<path d="M30 38 H98 M30 64 H98 M30 90 H98" ${S(12)}/>`,
     leave: `<path d="M56 24 H32 V104 H56" ${S()}/><path d="M52 64 H104 M86 44 L106 64 L86 84" ${S()}/>`,
     spectate: `<path d="M14 64 C30 36 98 36 114 64 C98 92 30 92 14 64 Z" ${S()}/><circle cx="64" cy="64" r="14" ${F}/>`,
     close: `<path d="M36 36 L92 92 M92 36 L36 92" ${S(12)}/>`,

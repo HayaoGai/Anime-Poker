@@ -19,6 +19,7 @@ export const zhHant = {
     'title.exitConfirm': '確定要離開遊戲嗎？',
     'credits.title': '製作人員',
     'credits.version': '版本 {version}',
+    'credits.bgm': '標題音樂：Chilling — Percy Doe\n牌桌音樂：A Garden In A Dream — Trio712',
 
     'profile.title': '設定你的角色',
     'profile.nickname': '暱稱',
@@ -78,6 +79,14 @@ export const zhHant = {
     'table.gameEnded': '比賽結束',
     'table.backToLobby': '返回大廳',
     'table.handHint': '目前牌型：{hand}',
+
+    'menu.title': '選單',
+    'menu.paused': '遊戲暫停',
+    'menu.music': '音樂',
+    'menu.sfx': '音效',
+    'menu.voice': '人聲',
+    'menu.spectate': '改為觀戰',
+    'menu.leave': '退出牌桌',
 
     'action.fold': '棄牌',
     'action.check': '過牌',

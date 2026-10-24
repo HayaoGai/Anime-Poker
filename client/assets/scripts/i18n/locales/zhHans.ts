@@ -17,6 +17,7 @@ export const zhHans: Record<I18nKey, string> = {
     'title.exitConfirm': '确定要退出游戏吗？',
     'credits.title': '制作人员',
     'credits.version': '版本 {version}',
+    'credits.bgm': '标题音乐：Chilling — Percy Doe\n牌桌音乐：A Garden In A Dream — Trio712',
 
     'profile.title': '设置你的角色',
     'profile.nickname': '昵称',
@@ -76,6 +77,14 @@ export const zhHans: Record<I18nKey, string> = {
     'table.gameEnded': '比赛结束',
     'table.backToLobby': '返回大厅',
     'table.handHint': '目前牌型：{hand}',
+
+    'menu.title': '菜单',
+    'menu.paused': '游戏暂停',
+    'menu.music': '音乐',
+    'menu.sfx': '音效',
+    'menu.voice': '人声',
+    'menu.spectate': '改为观战',
+    'menu.leave': '退出牌桌',
 
     'action.fold': '弃牌',
     'action.check': '过牌',

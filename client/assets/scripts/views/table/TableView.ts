@@ -1,9 +1,10 @@
-import { _decorator, Button, Canvas, Color, director, Graphics, Label, Node, ParticleSystem2D, Prefab, resources, SpriteFrame, tween, UIOpacity, UITransform, Vec3 } from 'cc';
+import { _decorator, Button, Canvas, Color, director, easing, Label, Node, ParticleSystem2D, Prefab, resources, SpriteFrame, Vec3 } from 'cc';
 import { audio, voiceActionFor } from '../../core/AudioManager';
 import { backKey } from '../../core/BackKey';
 import { eventBus } from '../../core/EventBus';
 import { popups } from '../../core/PopupManager';
 import { captureToPng } from '../../core/ScreenCapture';
+import { ScreenFade } from '../../core/ScreenFade';
 import { toast } from '../../core/Toast';
 import { ViewBase } from '../../core/ViewBase';
 import { i18n, t, type I18nKey } from '../../i18n/I18n';
@@ -22,6 +23,7 @@ import { ActionPanel } from './ActionPanel';
 import { cardFrames } from './CardFrames';
 import { CardView } from './CardView';
 import { Flyer } from './Flyer';
+import { PauseMenuPopup, type PauseMenuChoice } from './PauseMenuPopup';
 import { SeatView, type SeatRenderOptions } from './SeatView';
 import { WinBanner } from './WinBanner';
 
@@ -96,11 +98,8 @@ export class TableView extends ViewBase {
     @property(Label)
     myCountdown: Label | null = null;
 
-    @property(Button)
-    leaveButton: Button | null = null;
-
-    @property(Button)
-    spectateButton: Button | null = null;
+    @property({ type: Button, tooltip: '開啟暫停選單（鍵盤 Esc、Android 返回鍵同樣開啟）' })
+    menuButton: Button | null = null;
 
     @property(Button)
     sitButton: Button | null = null;
@@ -119,6 +118,9 @@ export class TableView extends ViewBase {
 
     @property(Prefab)
     confirmPopup: Prefab | null = null;
+
+    @property(Prefab)
+    pauseMenuPopup: Prefab | null = null;
 
     @property(Prefab)
     toastPrefab: Prefab | null = null;
@@ -158,10 +160,9 @@ export class TableView extends ViewBase {
         this.bindings.add(this.vm);
         this.actionPanel?.bindViewModel(this.vm);
 
-        this.leaveButton?.node.on(Button.EventType.CLICK, () => void this.confirmLeave());
-        this.spectateButton?.node.on(Button.EventType.CLICK, () => void this.confirmSpectate());
+        this.menuButton?.node.on(Button.EventType.CLICK, () => void this.openMenu());
         this.sitButton?.node.on(Button.EventType.CLICK, () => this.vm?.sit());
-        this.bindings.add(backKey.push(() => (void this.confirmLeave(), true)));
+        this.bindings.add(backKey.push(() => (void this.openMenu(), true)));
         if (this.winBanner) {
             this.winBanner.onShare = () => void this.share();
             this.winBanner.onLeave = () => void this.confirmLeave();
@@ -341,9 +342,7 @@ export class TableView extends ViewBase {
         const vm = this.vm;
         const snapshot = vm?.snapshot.value;
         if (!vm) return;
-        // 離線模式沒有觀戰；比賽結束後只能離開
         const spectator = vm.isSpectator.value;
-        if (this.spectateButton) this.spectateButton.node.active = !spectator && !vm.offline && !this.gameOver;
         if (!snapshot || this.gameOver) {
             if (this.sitButton) this.sitButton.node.active = false;
             return;
@@ -548,8 +547,25 @@ export class TableView extends ViewBase {
         for (const seat of this.seats) seat.cards.forEach(apply);
     }
 
-    // ---------------------------------------------------------------- 離開、觀戰、分享
+    // ---------------------------------------------------------------- 選單、離開、觀戰、分享
 
+    /** 暫停選單；離線模式在選單與接著的確認框開啟期間暫停牌局 */
+    private async openMenu(): Promise<void> {
+        const vm = this.vm;
+        if (!vm || !this.pauseMenuPopup || popups.count > 0 || this.leavingScene) return;
+        // 離線模式沒有觀戰；比賽結束後只能離開
+        const canSpectate = !vm.offline && !vm.isSpectator.value && !this.gameOver;
+        vm.setPaused(true);
+        try {
+            const choice = await popups.show<PauseMenuChoice, PauseMenuPopup>(this.pauseMenuPopup, (p) => p.setup({ paused: vm.offline, canSpectate }));
+            if (choice === 'leave') await this.confirmLeave();
+            else if (choice === 'spectate') await this.confirmSpectate();
+        } finally {
+            vm.setPaused(false);
+        }
+    }
+
+    // 選單關閉後節點要到這一格結束才銷毀（popups.count 仍算著它），確認框直接開啟、不檢查 popups.count
     private async confirmLeave(): Promise<void> {
         // 比賽已結束、房間已解散：不會棄牌，直接返回
         if (this.gameOver) {
@@ -557,7 +573,7 @@ export class TableView extends ViewBase {
             this.backToLobby();
             return;
         }
-        if (!this.confirmPopup || popups.count > 0) return;
+        if (!this.confirmPopup) return;
         const ok = await popups.show<boolean, ConfirmPopup>(this.confirmPopup, (p) => p.setup({ message: 'table.leaveConfirm' }));
         if (!ok) return;
         await this.vm?.leave();
@@ -565,7 +581,7 @@ export class TableView extends ViewBase {
     }
 
     private async confirmSpectate(): Promise<void> {
-        if (!this.confirmPopup || popups.count > 0) return;
+        if (!this.confirmPopup) return;
         const ok = await popups.show<boolean, ConfirmPopup>(this.confirmPopup, (p) => p.setup({ message: 'table.spectateConfirm' }));
         if (ok) this.vm?.standUp();
     }
@@ -594,20 +610,7 @@ export class TableView extends ViewBase {
 
     /** 全畫面白光淡出，讓截圖有拍照的回饋 */
     private cameraFlash(): void {
-        const canvas = director.getScene()?.getComponentInChildren(Canvas)?.node;
-        const size = canvas?.getComponent(UITransform)?.contentSize;
-        if (!canvas || !size) return;
-        const flash = new Node('CameraFlash');
-        flash.layer = canvas.layer;
-        canvas.addChild(flash);
-        flash.addComponent(UITransform).setContentSize(size);
-        const g = flash.addComponent(Graphics);
-        g.fillColor = Color.WHITE;
-        g.rect(-size.width, -size.height, size.width * 2, size.height * 2);
-        g.fill();
-        const opacity = flash.addComponent(UIOpacity);
-        opacity.opacity = 220;
-        tween(opacity).to(0.35, { opacity: 0 }, { easing: 'quadOut' }).call(() => flash.destroy()).start();
+        void ScreenFade.show(Color.WHITE, 0.35, { from: 220, ease: easing.quadOut });
     }
 
     private backToLobby(): void {

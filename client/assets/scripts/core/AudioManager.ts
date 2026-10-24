@@ -27,8 +27,8 @@ export type SfxName =
     | 'win'
     | 'lose';
 
-/** 背景音樂（使用者提供）：房間大廳、房間列表、牌桌 */
-export type BgmName = 'room' | 'room_list' | 'table';
+/** 背景音樂（使用者提供）：標題與大廳共用、牌桌 */
+export type BgmName = 'title' | 'table';
 
 /** 牌局行動對應的人聲；all-in 優先 */
 export function voiceActionFor(kind: ActionKind, allIn: boolean): Exclude<VoiceAction, 'select'> {
@@ -42,6 +42,10 @@ export function voiceActionFor(kind: ActionKind, allIn: boolean): Exclude<VoiceA
 class AudioService {
     readonly bgmVolume = new Observable(storage.get('bgmVolume', 0.6));
     readonly sfxVolume = new Observable(storage.get('sfxVolume', 0.9));
+    /** 暫停選單的三個開關，預設開啟。關閉音樂只靜音，曲目照常進行，重新開啟時不會從頭播放 */
+    readonly musicEnabled = new Observable(storage.get('musicEnabled', true));
+    readonly sfxEnabled = new Observable(storage.get('sfxEnabled', true));
+    readonly voiceEnabled = new Observable(storage.get('voiceEnabled', true));
 
     private bgmSource: AudioSource | null = null;
     private sfxSource: AudioSource | null = null;
@@ -49,31 +53,45 @@ class AudioService {
     private voiceSource: AudioSource | null = null;
     private selectVoiceToken = 0;
     private currentBgm: BgmName | null = null;
+    /** 切到背景時 BGM 正在播放，回到前景才需要接著播 */
+    private bgmResumePending = false;
 
     constructor() {
         this.bgmVolume.subscribe((v) => {
             storage.set('bgmVolume', v);
-            if (this.bgmSource) this.bgmSource.volume = v;
+            this.applyBgmVolume();
         }, false);
         this.sfxVolume.subscribe((v) => storage.set('sfxVolume', v), false);
+        this.musicEnabled.subscribe((on) => {
+            storage.set('musicEnabled', on);
+            this.applyBgmVolume();
+        }, false);
+        this.sfxEnabled.subscribe((on) => storage.set('sfxEnabled', on), false);
+        this.voiceEnabled.subscribe((on) => {
+            storage.set('voiceEnabled', on);
+            if (!on) this.stopSelectVoice();
+        }, false);
     }
 
     async playSfx(name: SfxName, volumeScale = 1): Promise<void> {
+        if (!this.sfxEnabled.value) return;
         const clip = await loadResource(`audio/sfx/${name}`, AudioClip);
-        if (clip) this.sources().sfx.playOneShot(clip, this.sfxVolume.value * volumeScale);
+        if (clip && this.sfxEnabled.value) this.sources().sfx.playOneShot(clip, this.sfxVolume.value * volumeScale);
     }
 
     /** 依行動者的頭像播放人聲 */
     async playVoice(avatarId: string, action: VoiceAction): Promise<void> {
+        if (!this.voiceEnabled.value) return;
         const clip = await loadResource(avatarById(avatarId).voice[action], AudioClip);
-        if (clip) this.sources().sfx.playOneShot(clip, this.sfxVolume.value);
+        if (clip && this.voiceEnabled.value) this.sources().sfx.playOneShot(clip, this.sfxVolume.value);
     }
 
     /** 播放選擇頭像的人聲，並中斷上一句仍在播放的 */
     async playSelectVoice(avatarId: string): Promise<void> {
         const token = ++this.selectVoiceToken;
+        if (!this.voiceEnabled.value) return;
         const clip = await loadResource(avatarById(avatarId).voice.select, AudioClip);
-        // 載入期間又選了別的頭像，就不播放這句
+        // 載入期間又選了別的頭像（或關閉了人聲），就不播放這句
         if (!clip || token !== this.selectVoiceToken) return;
         const { voice } = this.sources();
         voice.stop();
@@ -93,6 +111,7 @@ class AudioService {
     async playBgm(name: BgmName | null): Promise<void> {
         if (name === this.currentBgm) return;
         this.currentBgm = name;
+        this.bgmResumePending = false;
         const { bgm } = this.sources();
         bgm.stop();
         if (!name) return;
@@ -102,16 +121,34 @@ class AudioService {
         if (!clip || this.currentBgm !== name) return;
         bgm.clip = clip;
         bgm.loop = true;
-        bgm.volume = this.bgmVolume.value;
+        bgm.volume = this.bgmTargetVolume;
         bgm.play();
     }
 
+    /**
+     * 前景／背景切換。Web 上 WebBridge 與 Game.EVENT_HIDE/SHOW 會各通知一次，引擎本身也會中斷並恢復音源；
+     * 對播放中的音源呼叫 play() 會從頭重播，因此只恢復由這裡暫停、且尚未恢復的 BGM。
+     * 已停止的 BGM（例如牌桌曲目尚未提供）不會被恢復，避免播出殘留的上一首。
+     */
     pauseAll(): void {
-        this.bgmSource?.pause();
+        if (!this.bgmSource?.playing) return;
+        this.bgmResumePending = true;
+        this.bgmSource.pause();
     }
 
     resumeAll(): void {
-        if (this.currentBgm && this.bgmSource?.clip) this.bgmSource.play();
+        if (!this.bgmResumePending) return;
+        this.bgmResumePending = false;
+        // 從暫停處接著播放
+        if (this.bgmSource && !this.bgmSource.playing) this.bgmSource.play();
+    }
+
+    private get bgmTargetVolume(): number {
+        return this.musicEnabled.value ? this.bgmVolume.value : 0;
+    }
+
+    private applyBgmVolume(): void {
+        if (this.bgmSource) this.bgmSource.volume = this.bgmTargetVolume;
     }
 
     private sources(): { bgm: AudioSource; sfx: AudioSource; voice: AudioSource } {

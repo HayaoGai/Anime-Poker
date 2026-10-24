@@ -101,6 +101,32 @@ describe('LocalTableSession', () => {
         expect(total).toBe(STARTING_STACK * 4);
     });
 
+    it('暫停時牌桌時鐘與計時器停住，繼續後從停住的地方接著走', async () => {
+        const { session, latest } = start();
+        let yourTurn = 0;
+        session.on(ServerMessage.YourTurn, () => yourTurn++);
+        settle();
+        session.send(ClientMessage.StartGame, {});
+        // 等到輪到自己（不行動，讓倒數持續）
+        for (let i = 0; i < 600 && !yourTurn; i++) await vi.advanceTimersByTimeAsync(100);
+        expect(yourTurn).toBe(1);
+        const turnSeat = latest().turnSeat;
+        const remaining = session.timeSync.remaining(latest().turnDeadline);
+        expect(remaining).toBeGreaterThan(0);
+
+        session.setPaused(true);
+        await vi.advanceTimersByTimeAsync(10 * 60_000);
+        expect(session.timeSync.remaining(latest().turnDeadline)).toBe(remaining);
+        expect(latest().turnSeat).toBe(turnSeat);
+
+        session.setPaused(false);
+        await vi.advanceTimersByTimeAsync(remaining - 100);
+        expect(latest().turnSeat).toBe(turnSeat);
+        // 倒數結束：超時自動行動，輪到下一位
+        await vi.advanceTimersByTimeAsync(200);
+        expect(latest().turnSeat).not.toBe(turnSeat);
+    });
+
     it('離開後關閉連線，停止所有計時器與訊息', async () => {
         const { session } = start();
         settle();

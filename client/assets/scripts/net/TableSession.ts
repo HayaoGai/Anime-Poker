@@ -18,6 +18,8 @@ export interface TableSession {
     /** 狀態同步（每次更新後呼叫，訂閱時若已有狀態會立即呼叫一次） */
     onState(listener: (state: unknown) => void): Unsubscribe;
     send<T extends ClientMessage>(type: T, payload: ClientPayloads[T]): void;
+    /** 暫停／繼續牌局：只有離線模式能暫停（時鐘與計時器一起停住），連線模式不做事 */
+    setPaused(paused: boolean): void;
     leave(): Promise<void>;
 }
 

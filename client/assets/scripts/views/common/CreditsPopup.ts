@@ -6,7 +6,7 @@ import { nativeBridge } from '../../native/NativeBridge';
 const { ccclass, property, menu } = _decorator;
 
 /**
- * 製作人員：頭像、名字、E-mail，版號顯示在右下角。
+ * 製作人員：頭像、名字、E-mail、背景音樂出處，版號顯示在右下角。
  * 版號由平台提供：Web 讀建置時寫入的 version.json，Android 讀 App 的 versionName。
  */
 @ccclass('CreditsPopup')

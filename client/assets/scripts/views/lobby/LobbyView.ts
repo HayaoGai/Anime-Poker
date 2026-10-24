@@ -72,6 +72,8 @@ export class LobbyView extends ViewBase {
     }
 
     protected start(): void {
+        // 延續標題畫面的背景音樂；從 Table 場景回來時重新播放
+        void audio.playBgm('title');
         // 首次進入：必須先設定暱稱與頭像
         if (!profile.isComplete.value) {
             void this.editProfile(true).then(() => this.afterProfileReady());
@@ -112,7 +114,6 @@ export class LobbyView extends ViewBase {
         if (this.listPanel) this.listPanel.node.active = true;
         if (this.roomPanel) this.roomPanel.node.active = false;
         if (this.profileBadge) this.profileBadge.node.active = true;
-        void audio.playBgm('room_list');
     }
 
     private showRoom(): void {
@@ -128,7 +129,6 @@ export class LobbyView extends ViewBase {
         }
         // 在房間中不能修改暱稱與頭像（加入房間時已送出）
         if (this.profileBadge) this.profileBadge.node.active = false;
-        void audio.playBgm('room');
 
         this.roomBindings.push(
             session.on(ServerMessage.Notice, ({ code, nickname }) => toast.show(i18n.tCode('notice', code, { name: nickname ?? '' }))),

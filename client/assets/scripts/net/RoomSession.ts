@@ -88,6 +88,9 @@ export class RoomSession<State = unknown> implements TableSession {
         this.room.send(type, payload);
     }
 
+    /** 連線牌局由伺服器進行，不能暫停 */
+    setPaused(): void {}
+
     async leave(): Promise<void> {
         if (this.connection.value === 'closed') return;
         this.close();

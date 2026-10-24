@@ -17,17 +17,21 @@ const PREFILLED_BOTS = 3;
  *   - 送出的意圖與 Table 的輸出都以 setTimeout 非同步傳遞，不會在同一個呼叫堆疊中重入；
  *   - 訊息先送達、狀態後更新（同一輪產生的變更合併成一次），與 Colyseus 的訊息與狀態 patch 順序相同；
  *   - 訊息內容複製一份再送出，與經過網路序列化一樣不共用參考。
+ * 可以暫停：牌桌時鐘與所有計時器（電腦思考、行動倒數、發下一手）一起停住，繼續時從停住的地方接著走。
  */
 export class LocalTableSession implements TableSession {
     readonly connection = new Observable<ConnectionState>('connected');
-    /** 牌桌時鐘就是本機時鐘：沒有校正樣本時 offset 為 0 */
-    readonly timeSync = new TimeSync();
+    readonly timeSync: TimeSync = new LocalTimeSync(() => this.now());
     readonly sessionId = LOCAL_SESSION_ID;
     readonly offline = true;
 
     private readonly hub = new MessageHub();
     private readonly stateListeners = new Set<(state: unknown) => void>();
-    private readonly timers = new Set<ReturnType<typeof setTimeout>>();
+    private readonly timers = new Set<PendingTimer>();
+    /** 暫停開始的本機時間；未暫停時為 null */
+    private pausedAt: number | null = null;
+    /** 累計暫停的毫秒數：牌桌時鐘 = 本機時鐘 - 累計暫停 */
+    private pausedTotal = 0;
     private readonly table: Table;
     private outbox: { type: string; payload: unknown }[] = [];
     private stateDirty = false;
@@ -64,7 +68,7 @@ export class LocalTableSession implements TableSession {
                 },
             },
             scheduler: {
-                now: () => Date.now(),
+                now: () => this.now(),
                 setTimeout: (callback, ms) => this.schedule(callback, ms),
             },
         });
@@ -90,6 +94,17 @@ export class LocalTableSession implements TableSession {
         this.schedule(() => this.table.handleMessage(this.sessionId, type, copy), 0);
     }
 
+    setPaused(paused: boolean): void {
+        if (this.closed || paused === (this.pausedAt !== null)) return;
+        if (paused) {
+            this.pausedAt = Date.now();
+        } else {
+            this.pausedTotal += Date.now() - this.pausedAt!;
+            this.pausedAt = null;
+        }
+        for (const timer of this.timers) this.arm(timer);
+    }
+
     async leave(): Promise<void> {
         if (this.closed) return;
         this.close();
@@ -97,21 +112,38 @@ export class LocalTableSession implements TableSession {
 
     // ---------------------------------------------------------------- 排程與輸出
 
-    /** Table 的計時器與送進來的意圖：執行後 Table 的狀態可能已改變 */
+    /** 牌桌時鐘：暫停期間停住 */
+    private now(): number {
+        return (this.pausedAt ?? Date.now()) - this.pausedTotal;
+    }
+
+    /**
+     * Table 的計時器與送進來的意圖：執行後 Table 的狀態可能已改變。
+     * 以牌桌時鐘記下到期時間，暫停時取消底層的 setTimeout，繼續時依剩餘時間重新排程。
+     */
     private schedule(callback: () => void, ms: number): Timer {
-        const handle = setTimeout(() => {
-            this.timers.delete(handle);
-            if (this.closed) return;
-            callback();
-            this.markDirty();
-        }, ms);
-        this.timers.add(handle);
+        const timer: PendingTimer = { callback, due: this.now() + ms, handle: null };
+        this.timers.add(timer);
+        this.arm(timer);
         return {
             clear: () => {
-                clearTimeout(handle);
-                this.timers.delete(handle);
+                if (timer.handle) clearTimeout(timer.handle);
+                this.timers.delete(timer);
             },
         };
+    }
+
+    /** 依目前是否暫停，重新設定計時器底層的 setTimeout */
+    private arm(timer: PendingTimer): void {
+        if (timer.handle) clearTimeout(timer.handle);
+        timer.handle = null;
+        if (this.pausedAt !== null) return;
+        timer.handle = setTimeout(() => {
+            this.timers.delete(timer);
+            if (this.closed) return;
+            timer.callback();
+            this.markDirty();
+        }, Math.max(0, timer.due - this.now()));
     }
 
     private post(type: string, payload: unknown): void {
@@ -150,11 +182,29 @@ export class LocalTableSession implements TableSession {
         if (this.closed) return;
         this.connection.value = 'closed';
         this.table.dispose();
-        for (const handle of this.timers) clearTimeout(handle);
+        for (const timer of this.timers) if (timer.handle) clearTimeout(timer.handle);
         this.timers.clear();
         if (this.flushTimer) clearTimeout(this.flushTimer);
         this.flushTimer = null;
         this.outbox = [];
+    }
+}
+
+interface PendingTimer {
+    callback: () => void;
+    /** 到期時間（牌桌時鐘） */
+    due: number;
+    handle: ReturnType<typeof setTimeout> | null;
+}
+
+/** 牌桌時鐘就在本機，不需要校正：伺服器時間直接取牌桌時鐘（暫停期間停住，倒數也跟著停） */
+class LocalTimeSync extends TimeSync {
+    constructor(private readonly clock: () => number) {
+        super();
+    }
+
+    serverNow(): number {
+        return this.clock();
     }
 }
 

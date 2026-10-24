@@ -111,7 +111,7 @@
     "_prefab": null,
     "_lpos": {
       "__type__": "cc.Vec3",
-      "x": 960,
+      "x": 959.9999999999999,
       "y": 540,
       "z": 0
     },
@@ -222,7 +222,7 @@
     "_priority": 0,
     "_fov": 45,
     "_fovAxis": 0,
-    "_orthoHeight": 702.1300659754949,
+    "_orthoHeight": 761.8673218673218,
     "_near": 0,
     "_far": 2000,
     "_color": {
@@ -317,7 +317,7 @@
     "__prefab": null,
     "_contentSize": {
       "__type__": "cc.Size",
-      "width": 1920,
+      "width": 2411,
       "height": 1080
     },
     "_anchorPoint": {
@@ -348,7 +348,7 @@
       "a": 255
     },
     "_spriteFrame": {
-      "__uuid__": "51f745cd-f269-4fef-9d6e-58fdc537dcc1@f9941",
+      "__uuid__": "e6a887f4-22a2-4df5-8643-d57b3b170aa2@f9941",
       "__expectedType__": "cc.SpriteFrame"
     },
     "_type": 0,
@@ -578,7 +578,7 @@
     "_lpos": {
       "__type__": "cc.Vec3",
       "x": 0,
-      "y": 150,
+      "y": -47.846,
       "z": 0
     },
     "_lrot": {
@@ -939,7 +939,7 @@
     "__prefab": null,
     "_contentSize": {
       "__type__": "cc.Size",
-      "width": 1920,
+      "width": 1919.9999999999998,
       "height": 1080
     },
     "_anchorPoint": {
@@ -1065,7 +1065,7 @@
     "_prefab": null,
     "_lpos": {
       "__type__": "cc.Vec3",
-      "x": 932,
+      "x": 931.9999999999999,
       "y": 512,
       "z": 0
     },
@@ -1768,7 +1768,7 @@
     "_prefab": null,
     "_lpos": {
       "__type__": "cc.Vec3",
-      "x": 932,
+      "x": 931.9999999999999,
       "y": -512,
       "z": 0
     },
@@ -2136,7 +2136,7 @@
     "__prefab": null,
     "_contentSize": {
       "__type__": "cc.Size",
-      "width": 1920,
+      "width": 1919.9999999999998,
       "height": 1080
     },
     "_anchorPoint": {
@@ -2201,7 +2201,7 @@
     "__prefab": null,
     "_contentSize": {
       "__type__": "cc.Size",
-      "width": 1920,
+      "width": 1919.9999999999998,
       "height": 1080
     },
     "_anchorPoint": {
@@ -2306,6 +2306,7 @@
       "__expectedType__": "cc.Prefab"
     },
     "nextScene": "Lobby",
+    "fadeInDuration": 0.8,
     "_id": "1YuZ0H6Z6xgbSAW5iFl48f"
   },
   {

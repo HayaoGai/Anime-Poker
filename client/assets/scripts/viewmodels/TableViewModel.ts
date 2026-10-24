@@ -148,6 +148,11 @@ export class TableViewModel extends ViewModel {
         this.session.send(ClientMessage.Sit, {});
     }
 
+    /** 只有離線模式會真的暫停 */
+    setPaused(paused: boolean): void {
+        this.session.setPaused(paused);
+    }
+
     leave(): Promise<void> {
         return tableStore.leave();
     }

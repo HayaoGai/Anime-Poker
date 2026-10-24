@@ -17,6 +17,7 @@ export const en: Record<I18nKey, string> = {
     'title.exitConfirm': 'Quit the game?',
     'credits.title': 'Credits',
     'credits.version': 'Version {version}',
+    'credits.bgm': 'Title music: "Chilling" by Percy Doe\nTable music: "A Garden In A Dream" by Trio712',
 
     'profile.title': 'Create your character',
     'profile.nickname': 'Nickname',
@@ -76,6 +77,14 @@ export const en: Record<I18nKey, string> = {
     'table.gameEnded': 'Game over',
     'table.backToLobby': 'Back to Lobby',
     'table.handHint': 'Your hand: {hand}',
+
+    'menu.title': 'Menu',
+    'menu.paused': 'Paused',
+    'menu.music': 'Music',
+    'menu.sfx': 'Sound Effects',
+    'menu.voice': 'Voice',
+    'menu.spectate': 'Spectate',
+    'menu.leave': 'Leave Table',
 
     'action.fold': 'Fold',
     'action.check': 'Check',
