@@ -19,7 +19,7 @@ export function preloadForLobby(): void {
     }
 }
 
-/** 大廳：牌桌場景、牌面與籌碼、其餘音效、所有頭像的座位圖與行動人聲，最後是牌桌 BGM */
+/** 大廳：牌桌場景、牌面與籌碼、其餘音效、所有頭像的立繪與行動人聲，最後是牌桌 BGM */
 export function preloadForTable(): void {
     director.preloadScene('Table');
     resources.preloadDir('textures/cards', SpriteFrame);
@@ -30,11 +30,11 @@ export function preloadForTable(): void {
     preloadResources([bgmPath('table')], AudioClip);
 }
 
-/** 牌桌座位圖與行動人聲；urgent 用於已入座的頭像，排到佇列最前面 */
+/** 牌桌座位的立繪與行動人聲；urgent 用於已入座的頭像，排到佇列最前面 */
 export function preloadAvatarForTable(avatarId: string, urgent = false): void {
     const avatar = avatarById(avatarId);
     const voices = VOICE_ACTIONS.filter((action) => action !== 'select').map((action) => avatar.voice[action]);
     // urgent 會插到佇列最前面，後排入的先載入，因此圖片最後排入
     preloadResources(voices, AudioClip, urgent);
-    preloadResources([avatar.texture[AvatarVariant.Table]], SpriteFrame, urgent);
+    preloadResources([avatar.texture[AvatarVariant.Full]], SpriteFrame, urgent);
 }

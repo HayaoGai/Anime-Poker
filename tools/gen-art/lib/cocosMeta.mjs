@@ -36,23 +36,3 @@ export function patchSpriteMeta(pngFile, { border } = {}) {
     writeFileSync(metaFile, next);
     return 'patched';
 }
-
-/**
- * 建立 Auto Atlas（.pac），建置時 Cocos 會把資料夾內的圖片合併成圖集以減少 draw call。
- * .pac.meta 由 Cocos 產生，存在時套用圖集大小與取樣設定。
- */
-export function ensureAutoAtlas(pacFile, { size }) {
-    if (!existsSync(pacFile)) writeFileSync(pacFile, `${JSON.stringify({ __type__: 'cc.SpriteAtlas' }, null, 2)}\n`);
-
-    const metaFile = `${pacFile}.meta`;
-    if (!existsSync(metaFile)) return 'missing';
-    const raw = readFileSync(metaFile, 'utf8');
-    const meta = JSON.parse(raw);
-    Object.assign(meta.userData, { maxWidth: size, maxHeight: size, allowRotation: false });
-    Object.assign(meta.userData.textureSetting ?? {}, { wrapModeS: 'clamp-to-edge', wrapModeT: 'clamp-to-edge' });
-
-    const next = `${JSON.stringify(meta, null, 2)}\n`;
-    if (next === raw) return 'unchanged';
-    writeFileSync(metaFile, next);
-    return 'patched';
-}

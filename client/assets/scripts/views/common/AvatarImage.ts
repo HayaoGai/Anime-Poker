@@ -11,7 +11,7 @@ export class AvatarImage extends Component {
     @property(Sprite)
     sprite: Sprite | null = null;
 
-    @property({ type: Enum(AvatarVariant), tooltip: '載入哪一種圖片：Icon 圖示、Full 立繪、Table 牌桌座位' })
+    @property({ type: Enum(AvatarVariant), tooltip: '載入哪一種圖片：Icon 圖示、Full 立繪' })
     variant = AvatarVariant.Icon;
 
     private current = '';

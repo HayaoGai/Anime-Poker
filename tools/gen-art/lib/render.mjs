@@ -16,6 +16,12 @@ export function renderPng(svgText) {
     return new Resvg(svgText, { font: FONT, shapeRendering: 2, textRendering: 1 }).render().asPng();
 }
 
+/** 算圖後的 RGBA 像素（每像素 4 bytes） */
+export function renderPixels(svgText) {
+    const image = new Resvg(svgText, { font: FONT, shapeRendering: 2, textRendering: 1 }).render();
+    return { width: image.width, height: image.height, pixels: image.pixels };
+}
+
 /** 輸出 PNG */
 export function writePng(file, svgText) {
     mkdirSync(path.dirname(file), { recursive: true });

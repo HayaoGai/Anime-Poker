@@ -3,6 +3,7 @@ import { audio } from '../core/AudioManager';
 import { backKey } from '../core/BackKey';
 // 載入時即安裝全域按鈕回饋（變暗、Web 游標），必須早於任何場景的按鈕啟用
 import '../core/ButtonFeedback';
+import '../core/DynamicAtlas';
 import { eventBus } from '../core/EventBus';
 import { i18n } from '../i18n/I18n';
 import { labelFont } from '../i18n/LabelFont';

@@ -1,7 +1,9 @@
-// 撲克牌：52 張牌面 + 牌背，200×280。檔名 card_<點數><花色>.png（例如 card_As.png），與協定的卡牌字串一致。
+// 撲克牌：牌面由「底紙 + 點數 + 小花色 + 大花色 + 裝飾」在客戶端組合（CardFace.prefab），這裡輸出各層元件與牌背。
+// 設計框為 200×280，各層元件裁成「以錨點為中心」的最小範圍：同一層的圖不論大小都以同一點為中心，
+// prefab 裡每層節點的位置固定為錨點（換算為 Cocos 座標：x - 100, 140 - y），不需另外記錄偏移。
 import path from 'node:path';
 import { C, SUIT_COLOR } from './lib/palette.mjs';
-import { writePng } from './lib/render.mjs';
+import { renderPixels, writePng } from './lib/render.mjs';
 import { HEART, SUIT_PATH, linear, place, radial, sparklePath, starPath, svg, text } from './lib/shapes.mjs';
 
 const W = 200;
@@ -9,13 +11,24 @@ const H = 280;
 const RANKS = ['2', '3', '4', '5', '6', '7', '8', '9', 'T', 'J', 'Q', 'K', 'A'];
 const SUITS = ['s', 'h', 'd', 'c'];
 const LABEL = { T: '10' };
+/** 花色只有兩種顏色，點數與人頭牌徽章依顏色各輸出一份 */
+const COLORS = { red: SUIT_COLOR.h, black: SUIT_COLOR.s };
 
-function cardBase(id) {
-    const defs = linear(`${id}-paper`, [[0, '#ffffff'], [1, '#fff4f8']]);
+/** 各層的錨點（設計框座標），與 CardFace.prefab 的節點位置對應 */
+export const ANCHORS = {
+    rank: [54, 72],
+    smallSuit: [52, 146],
+    bigSuit: [130, 204],
+    /** 人頭牌徽章與 A 的閃光共用同一層 */
+    deco: [150, 60],
+};
+
+function faceSvg() {
+    const defs = linear('paper', [[0, '#ffffff'], [1, '#fff4f8']]);
     const body = `
-        <rect x="2" y="2" width="${W - 4}" height="${H - 4}" rx="16" fill="url(#${id}-paper)" stroke="#e7dcf3" stroke-width="3"/>
+        <rect x="2" y="2" width="${W - 4}" height="${H - 4}" rx="16" fill="url(#paper)" stroke="#e7dcf3" stroke-width="3"/>
         <rect x="10" y="10" width="${W - 20}" height="${H - 20}" rx="10" fill="none" stroke="#f6e3ee" stroke-width="2"/>`;
-    return { defs, body };
+    return svg(W, H, body, defs);
 }
 
 /** 人頭牌右上角的小徽章：K 王冠、Q 后冠、J 星星緞帶（設計框中心約在 100,76） */
@@ -33,23 +46,30 @@ function emblem(rank, color) {
 }
 
 /** 手機上也要一眼看出牌：左上大點數 + 小花色，右下大花色；人頭牌右上加徽章、A 加閃光點綴 */
-function cardSvg(rank, suit) {
-    const id = `c${rank}${suit}`;
-    const color = SUIT_COLOR[suit];
+function rankLayer(rank, color) {
     const label = LABEL[rank] ?? rank;
+    const [x, y] = ANCHORS.rank;
     // 用 SemiBold 讓筆畫細一點，「10」的兩個字才不會黏在一起
-    const rankText = text(label, 54, 72, { size: label.length > 1 ? 88 : 108, fill: color, weight: 600, extra: 'dominant-baseline="middle"' });
-    let deco = '';
-    if ('JQK'.includes(rank)) deco = `<g transform="translate(150 60) scale(1.05) translate(-100 -76)">${emblem(rank, color)}</g>`;
-    else if (rank === 'A') deco = place(sparklePath(), 152, 58, 34, { fill: C.gold }) + place(sparklePath(), 176, 92, 16, { fill: C.pink });
+    return text(label, x, y, { size: label.length > 1 ? 88 : 108, fill: color, weight: 600, extra: 'dominant-baseline="middle"' });
+}
 
-    const base = cardBase(id);
-    const body = `
-        ${rankText}
-        ${place(SUIT_PATH[suit], 52, 146, 50, { fill: color })}
-        ${place(SUIT_PATH[suit], 130, 204, 112, { fill: color })}
-        ${deco}`;
-    return svg(W, H, base.body + body, base.defs);
+function smallSuitLayer(suit) {
+    const [x, y] = ANCHORS.smallSuit;
+    return place(SUIT_PATH[suit], x, y, 50, { fill: SUIT_COLOR[suit] });
+}
+
+function bigSuitLayer(suit) {
+    const [x, y] = ANCHORS.bigSuit;
+    return place(SUIT_PATH[suit], x, y, 112, { fill: SUIT_COLOR[suit] });
+}
+
+function emblemLayer(rank, color) {
+    const [x, y] = ANCHORS.deco;
+    return `<g transform="translate(${x} ${y}) scale(1.05) translate(-100 -76)">${emblem(rank, color)}</g>`;
+}
+
+function sparkleLayer() {
+    return place(sparklePath(), 152, 58, 34, { fill: C.gold }) + place(sparklePath(), 176, 92, 16, { fill: C.pink });
 }
 
 function backSvg() {
@@ -75,18 +95,67 @@ function backSvg() {
     return svg(W, H, body, defs);
 }
 
+/** 不透明像素的範圍 [minX, minY, maxX, maxY]（含） */
+function opaqueBounds(svgText) {
+    const { width, height, pixels } = renderPixels(svgText);
+    let minX = width;
+    let minY = height;
+    let maxX = -1;
+    let maxY = -1;
+    for (let y = 0; y < height; y++) {
+        for (let x = 0; x < width; x++) {
+            if (pixels[(y * width + x) * 4 + 3] === 0) continue;
+            minX = Math.min(minX, x);
+            minY = Math.min(minY, y);
+            maxX = Math.max(maxX, x);
+            maxY = Math.max(maxY, y);
+        }
+    }
+    return [minX, minY, maxX, maxY];
+}
+
+/** 把一層元件裁成以錨點為中心的圖片（四周各留 1px 透明，避免圖集取樣時邊緣被切到） */
+function writeLayer(file, body, [ax, ay]) {
+    // 先在較大的畫布上算圖找出範圍，元件超出設計框（例如點數「10」）也不會被裁掉
+    const pad = 40;
+    const [minX, minY, maxX, maxY] = opaqueBounds(
+        `<svg xmlns="http://www.w3.org/2000/svg" width="${W + pad * 2}" height="${H + pad * 2}" viewBox="${-pad} ${-pad} ${W + pad * 2} ${H + pad * 2}">${body}</svg>`,
+    );
+    const halfW = Math.max(ax - (minX - pad), maxX - pad + 1 - ax) + 1;
+    const halfH = Math.max(ay - (minY - pad), maxY - pad + 1 - ay) + 1;
+    writePng(
+        file,
+        `<svg xmlns="http://www.w3.org/2000/svg" width="${halfW * 2}" height="${halfH * 2}" viewBox="${ax - halfW} ${ay - halfH} ${halfW * 2} ${halfH * 2}">${body}</svg>`,
+    );
+}
+
+/**
+ * 輸出檔名（SpriteFrame 名稱與檔名相同，客戶端 CardFrames 依此取用）：
+ *   card_face / card_back            底紙、牌背
+ *   rank_<red|black>_<點數>           點數（T 顯示為 10）
+ *   suit_small_<花色> / suit_<花色>    小花色、大花色
+ *   emblem_<red|black>_<J|Q|K>        人頭牌徽章
+ *   sparkle                          A 的閃光
+ */
 export function generateCards(textures) {
     const dir = path.join(textures, 'cards');
     const written = [];
-    for (const suit of SUITS) {
-        for (const rank of RANKS) {
-            const file = path.join(dir, `card_${rank}${suit}.png`);
-            writePng(file, cardSvg(rank, suit));
-            written.push(file);
-        }
+    const out = (name) => {
+        const file = path.join(dir, `${name}.png`);
+        written.push(file);
+        return file;
+    };
+
+    writePng(out('card_face'), faceSvg());
+    writePng(out('card_back'), backSvg());
+    for (const [colorName, color] of Object.entries(COLORS)) {
+        for (const rank of RANKS) writeLayer(out(`rank_${colorName}_${rank}`), rankLayer(rank, color), ANCHORS.rank);
+        for (const rank of ['J', 'Q', 'K']) writeLayer(out(`emblem_${colorName}_${rank}`), emblemLayer(rank, color), ANCHORS.deco);
     }
-    const back = path.join(dir, 'card_back.png');
-    writePng(back, backSvg());
-    written.push(back);
+    for (const suit of SUITS) {
+        writeLayer(out(`suit_small_${suit}`), smallSuitLayer(suit), ANCHORS.smallSuit);
+        writeLayer(out(`suit_${suit}`), bigSuitLayer(suit), ANCHORS.bigSuit);
+    }
+    writeLayer(out('sparkle'), sparkleLayer(), ANCHORS.deco);
     return written;
 }
