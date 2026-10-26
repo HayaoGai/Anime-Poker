@@ -1,7 +1,8 @@
 import { AudioClip, AudioSource, director, Node } from 'cc';
-import { avatarById, type VoiceAction } from '../config/Avatars';
+import { AVATAR_BUNDLE, avatarById, type VoiceAction } from '../config/Avatars';
 import type { ActionKind } from '../shared/poker';
 import { Observable } from './Observable';
+import type { BundleName } from './Bundles';
 import { loadResource } from './ResourceCache';
 import { storage } from './Storage';
 
@@ -29,15 +30,18 @@ export const SFX_NAMES = [
 ] as const;
 export type SfxName = (typeof SFX_NAMES)[number];
 
+/** 音效與背景音樂所在的 bundle（assets/audio） */
+export const AUDIO_BUNDLE: BundleName = 'audio';
+
 export function sfxPath(name: SfxName): string {
-    return `audio/sfx/${name}`;
+    return `sfx/${name}`;
 }
 
 /** 背景音樂（使用者提供）：標題與大廳共用、牌桌 */
 export type BgmName = 'title' | 'table';
 
 export function bgmPath(name: BgmName): string {
-    return `audio/bgm/${name}`;
+    return `bgm/${name}`;
 }
 
 /** 牌局行動對應的人聲；all-in 優先 */
@@ -85,14 +89,14 @@ class AudioService {
 
     async playSfx(name: SfxName, volumeScale = 1): Promise<void> {
         if (!this.sfxEnabled.value) return;
-        const clip = await loadResource(sfxPath(name), AudioClip);
+        const clip = await loadResource(AUDIO_BUNDLE, sfxPath(name), AudioClip);
         if (clip && this.sfxEnabled.value) this.sources().sfx.playOneShot(clip, this.sfxVolume.value * volumeScale);
     }
 
     /** 依行動者的頭像播放人聲 */
     async playVoice(avatarId: string, action: VoiceAction): Promise<void> {
         if (!this.voiceEnabled.value) return;
-        const clip = await loadResource(avatarById(avatarId).voice[action], AudioClip);
+        const clip = await loadResource(AVATAR_BUNDLE, avatarById(avatarId).voice[action], AudioClip);
         if (clip && this.voiceEnabled.value) this.sources().sfx.playOneShot(clip, this.sfxVolume.value);
     }
 
@@ -100,7 +104,7 @@ class AudioService {
     async playSelectVoice(avatarId: string): Promise<void> {
         const token = ++this.selectVoiceToken;
         if (!this.voiceEnabled.value) return;
-        const clip = await loadResource(avatarById(avatarId).voice.select, AudioClip);
+        const clip = await loadResource(AVATAR_BUNDLE, avatarById(avatarId).voice.select, AudioClip);
         // 載入期間又選了別的頭像（或關閉了人聲），就不播放這句
         if (!clip || token !== this.selectVoiceToken) return;
         const { voice } = this.sources();
@@ -126,7 +130,7 @@ class AudioService {
         bgm.stop();
         if (!name) return;
 
-        const clip = await loadResource(bgmPath(name), AudioClip);
+        const clip = await loadResource(AUDIO_BUNDLE, bgmPath(name), AudioClip);
         // 載入期間又切換了曲目，就不播放這首
         if (!clip || this.currentBgm !== name) return;
         bgm.clip = clip;

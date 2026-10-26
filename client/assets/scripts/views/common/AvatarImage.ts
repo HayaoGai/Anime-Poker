@@ -1,10 +1,10 @@
 import { _decorator, Component, Enum, Sprite, SpriteFrame } from 'cc';
-import { avatarById, AvatarVariant } from '../../config/Avatars';
+import { AVATAR_BUNDLE, avatarById, AvatarVariant } from '../../config/Avatars';
 import { loadResource } from '../../core/ResourceCache';
 
 const { ccclass, property, menu } = _decorator;
 
-/** 依頭像 id 從 resources 載入圖片（座位、名牌、頭像選擇都使用） */
+/** 依頭像 id 從 avatars 包載入圖片（座位、名牌、頭像選擇都使用） */
 @ccclass('AvatarImage')
 @menu('AnimePoker/AvatarImage')
 export class AvatarImage extends Component {
@@ -23,7 +23,7 @@ export class AvatarImage extends Component {
             if (this.sprite) this.sprite.spriteFrame = null;
             return;
         }
-        void loadResource(avatarById(avatarId).texture[this.variant], SpriteFrame).then((frame) => {
+        void loadResource(AVATAR_BUNDLE, avatarById(avatarId).texture[this.variant], SpriteFrame).then((frame) => {
             // 載入期間頭像又換了，就不套用舊的結果
             if (this.isValid && this.sprite && this.current === avatarId && frame) this.sprite.spriteFrame = frame;
         });

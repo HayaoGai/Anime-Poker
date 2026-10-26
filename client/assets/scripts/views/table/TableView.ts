@@ -1,6 +1,7 @@
-import { _decorator, Button, Canvas, Color, director, easing, Label, Node, ParticleSystem2D, Prefab, resources, SpriteFrame, Vec3 } from 'cc';
+import { _decorator, Button, Canvas, Color, director, easing, Label, Node, ParticleSystem2D, Prefab, SpriteFrame, Vec3 } from 'cc';
 import { audio, voiceActionFor } from '../../core/AudioManager';
 import { backKey } from '../../core/BackKey';
+import { loadBundle, loadScene } from '../../core/Bundles';
 import { eventBus } from '../../core/EventBus';
 import { popups } from '../../core/PopupManager';
 import { captureToPng } from '../../core/ScreenCapture';
@@ -148,7 +149,7 @@ export class TableView extends ViewBase {
     protected onLoad(): void {
         // 直接從 Table 場景開始預覽時沒有連線：回到 Lobby
         if (!tableStore.session) {
-            this.scheduleOnce(() => director.loadScene('Lobby'), 0);
+            this.scheduleOnce(() => void loadScene('Lobby'), 0);
             return;
         }
         // 牌桌頂部中央有時間與電量 HUD，提示往下移
@@ -620,18 +621,20 @@ export class TableView extends ViewBase {
     private backToLobby(): void {
         if (this.leavingScene) return;
         this.leavingScene = true;
-        director.loadScene('Lobby');
+        void loadScene('Lobby');
     }
 
     private loadChipFrames(): Promise<void> {
         return new Promise((resolve) => {
-            resources.loadDir('textures/chips', SpriteFrame, (_err, frames) => {
-                for (const frame of frames ?? []) {
-                    const value = Number(frame.name.replace(/^chip_/, ''));
-                    if (value) this.chipFrames.set(value, frame);
-                }
-                resolve();
-            });
+            void loadBundle('table').then((table) =>
+                table.loadDir('textures/chips', SpriteFrame, (_err, frames) => {
+                    for (const frame of frames ?? []) {
+                        const value = Number(frame.name.replace(/^chip_/, ''));
+                        if (value) this.chipFrames.set(value, frame);
+                    }
+                    resolve();
+                }),
+            );
         });
     }
 }

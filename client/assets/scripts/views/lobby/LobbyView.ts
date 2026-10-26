@@ -1,7 +1,8 @@
-import { _decorator, director, Node, Prefab } from 'cc';
+import { _decorator, Node, Prefab } from 'cc';
 import { preloadForLobby, preloadForTable } from '../../app/Preload';
 import { audio } from '../../core/AudioManager';
 import { backKey } from '../../core/BackKey';
+import { loadScene } from '../../core/Bundles';
 import { popups } from '../../core/PopupManager';
 import { toast } from '../../core/Toast';
 import { ViewBase } from '../../core/ViewBase';
@@ -160,7 +161,7 @@ export class LobbyView extends ViewBase {
     private gotoTable(): void {
         if (this.leavingScene) return;
         this.leavingScene = true;
-        director.loadScene('Table');
+        void loadScene('Table');
     }
 
     private onBack(): boolean {
@@ -168,7 +169,7 @@ export class LobbyView extends ViewBase {
             void this.leaveRoom();
         } else {
             this.leavingScene = true;
-            director.loadScene('Title');
+            void loadScene('Title');
         }
         return true;
     }

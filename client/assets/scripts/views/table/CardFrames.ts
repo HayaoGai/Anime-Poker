@@ -1,4 +1,5 @@
-import { resources, SpriteFrame } from 'cc';
+import { SpriteFrame } from 'cc';
+import { loadBundle } from '../../core/Bundles';
 import { type Card, rankOf, suitOf } from '../../shared/cards';
 
 /** 牌面各層的圖片（CardFace.prefab 的子節點依序疊上）；deco 為 null 代表該點數沒有裝飾 */
@@ -21,14 +22,17 @@ class CardFramesService {
     private loading: Promise<void> | null = null;
 
     preload(): Promise<void> {
-        this.loading ??= new Promise((resolve) => {
-            resources.loadDir('textures/cards', SpriteFrame, (err, assets) => {
-                if (err) console.warn('[CardFrames] 載入失敗', err);
-                // SpriteFrame 名稱與圖片相同，例如 card_back、rank_red_A、suit_s
-                for (const frame of assets ?? []) this.frames.set(frame.name, frame);
-                resolve();
-            });
-        });
+        this.loading ??= loadBundle('table').then(
+            (table) =>
+                new Promise((resolve) => {
+                    table.loadDir('textures/cards', SpriteFrame, (err, assets) => {
+                        if (err) console.warn('[CardFrames] 載入失敗', err);
+                        // SpriteFrame 名稱與圖片相同，例如 card_back、rank_red_A、suit_s
+                        for (const frame of assets ?? []) this.frames.set(frame.name, frame);
+                        resolve();
+                    });
+                }),
+        );
         return this.loading;
     }
 

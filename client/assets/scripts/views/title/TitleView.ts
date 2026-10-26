@@ -1,7 +1,8 @@
-import { _decorator, Button, Color, Component, director, EventKeyboard, input, Input, KeyCode, Node, Prefab } from 'cc';
+import { _decorator, Button, Color, Component, EventKeyboard, input, Input, KeyCode, Node, Prefab } from 'cc';
 import { preloadForLobby } from '../../app/Preload';
 import { audio } from '../../core/AudioManager';
 import { backKey } from '../../core/BackKey';
+import { loadScene, type SceneName } from '../../core/Bundles';
 import { popups } from '../../core/PopupManager';
 import { ScreenFade } from '../../core/ScreenFade';
 import { nativeBridge } from '../../native/NativeBridge';
@@ -34,7 +35,7 @@ export class TitleView extends Component {
     confirmPopup: Prefab | null = null;
 
     @property({ tooltip: '下一個場景' })
-    nextScene = 'Lobby';
+    nextScene: SceneName = 'Lobby';
 
     @property({ tooltip: '遊戲啟動時由黑淡入的秒數' })
     fadeInDuration = 0.8;
@@ -49,7 +50,6 @@ export class TitleView extends Component {
         input.on(Input.EventType.KEY_DOWN, this.onKeyDown, this);
         this.removeBackHandler = backKey.push(() => this.onBack());
         void audio.playBgm('title');
-        director.preloadScene(this.nextScene);
         preloadForLobby();
         if (!launched) {
             launched = true;
@@ -75,7 +75,7 @@ export class TitleView extends Component {
         if (this.started || this.fading || popups.count > 0) return;
         this.started = true;
         void audio.playSfx('ui_click');
-        setTimeout(() => director.loadScene(this.nextScene), 500);
+        setTimeout(() => void loadScene(this.nextScene), 500);
     }
 
     private openCredits(): void {

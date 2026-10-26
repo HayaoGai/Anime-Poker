@@ -17,15 +17,17 @@ import { writeContactSheet } from './lib/preview.mjs';
 import { generateParticles } from './particles.mjs';
 import { NINE_SLICE, generateUi } from './ui.mjs';
 
-// 放在 resources 底下，客戶端才能依 id 動態載入（例如依卡牌字串載入牌面、依頭像 id 載入人聲）
-const TEXTURES = path.join(CLIENT_DIR, 'assets', 'resources', 'textures');
+// 依使用的場景放進各 Asset Bundle 的 textures 資料夾（客戶端以 bundle 依路徑動態載入，例如依卡牌字串載入牌面）：
+// 牌面與籌碼只在牌桌使用，按鈕圖示、介面與粒子則每個場景共用
+const TABLE_TEXTURES = path.join(CLIENT_DIR, 'assets', 'table', 'textures');
+const COMMON_TEXTURES = path.join(CLIENT_DIR, 'assets', 'common', 'textures');
 
 const GENERATORS = {
-    cards: { run: () => generateCards(TEXTURES), sheet: { cell: 120, columns: 13 } },
-    chips: { run: () => generateChips(TEXTURES), sheet: { cell: 140, columns: 5 } },
-    icons: { run: () => generateIcons(TEXTURES), sheet: { cell: 110, columns: 9, background: '#b79cff' } },
-    ui: { run: () => generateUi(TEXTURES), sheet: { cell: 150, columns: 8 } },
-    particles: { run: () => generateParticles(TEXTURES), sheet: { cell: 110, columns: 7, background: '#4b3f72' } },
+    cards: { run: () => generateCards(TABLE_TEXTURES), sheet: { cell: 120, columns: 13 } },
+    chips: { run: () => generateChips(TABLE_TEXTURES), sheet: { cell: 140, columns: 5 } },
+    icons: { run: () => generateIcons(COMMON_TEXTURES), sheet: { cell: 110, columns: 9, background: '#b79cff' } },
+    ui: { run: () => generateUi(COMMON_TEXTURES), sheet: { cell: 150, columns: 8 } },
+    particles: { run: () => generateParticles(COMMON_TEXTURES), sheet: { cell: 110, columns: 7, background: '#4b3f72' } },
 };
 
 const { values } = parseArgs();

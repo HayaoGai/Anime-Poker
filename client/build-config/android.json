@@ -8,19 +8,11 @@
   "md5Cache": false,
   "sourceMaps": false,
   "mainBundleCompressionType": "merge_dep",
-  "startScene": "c48444eb-6b50-448b-8709-e5fa61857505",
+  "startScene": "855f6d67-1787-4b5a-89de-d9695adb9396",
   "scenes": [
     {
-      "url": "db://assets/scenes/Title.scene",
-      "uuid": "c48444eb-6b50-448b-8709-e5fa61857505"
-    },
-    {
-      "url": "db://assets/scenes/Lobby.scene",
-      "uuid": "3030b1cb-e624-432a-98bd-2d8136bc4304"
-    },
-    {
-      "url": "db://assets/scenes/Table.scene",
-      "uuid": "2b3cd462-e919-48fc-8182-fc9d40e4e6fd"
+      "url": "db://assets/loading/Loading.scene",
+      "uuid": "855f6d67-1787-4b5a-89de-d9695adb9396"
     }
   ],
   "packages": {

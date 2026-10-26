@@ -13,7 +13,7 @@ import { nativeBridge } from '../native/NativeBridge';
 let initialized = false;
 
 /**
- * App 啟動：初始化各項全域服務，只會執行一次（由每個場景的 AppRoot 呼叫，
+ * App 啟動：初始化各項全域服務，只會執行一次（由 Loading 經 Boot 呼叫；每個場景的 AppRoot 也會呼叫，
  * 因此從任何場景開始預覽都能正常運作）。
  */
 export function initApp(): void {
@@ -31,7 +31,4 @@ export function initApp(): void {
     game.on(Game.EVENT_SHOW, () => eventBus.emit('appResumed'));
     eventBus.on('appPaused', () => audio.pauseAll());
     eventBus.on('appResumed', () => audio.resumeAll());
-
-    // Web：第一個場景就緒後收起 HTML 啟動畫面（build-templates/web-mobile/index.ejs）
-    (globalThis as { hideSplash?: () => Promise<void> }).hideSplash?.();
 }

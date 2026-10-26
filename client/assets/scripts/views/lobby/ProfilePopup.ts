@@ -1,5 +1,5 @@
 import { _decorator, Button, EditBox, instantiate, Node, Sprite, SpriteFrame, Tween, tween, UIOpacity, Vec3 } from 'cc';
-import { avatarById, AVATARS, AvatarVariant } from '../../config/Avatars';
+import { AVATAR_BUNDLE, avatarById, AVATARS, AvatarVariant } from '../../config/Avatars';
 import { audio } from '../../core/AudioManager';
 import { PopupBase } from '../../core/PopupBase';
 import { loadResource } from '../../core/ResourceCache';
@@ -110,7 +110,7 @@ export class ProfilePopup extends PopupBase<boolean> {
     private showFull(avatarId: string, animate: boolean): void {
         const sprite = this.avatarFull;
         if (!sprite) return;
-        void loadResource(avatarById(avatarId).texture[AvatarVariant.Full], SpriteFrame).then((frame) => {
+        void loadResource(AVATAR_BUNDLE, avatarById(avatarId).texture[AvatarVariant.Full], SpriteFrame).then((frame) => {
             // 載入期間又換了頭像，就不套用舊的結果
             if (!this.isValid || this.selected !== avatarId || !frame) return;
             if (animate && sprite.spriteFrame) this.switchFull(sprite, frame);

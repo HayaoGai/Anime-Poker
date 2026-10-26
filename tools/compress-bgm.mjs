@@ -1,6 +1,6 @@
 // 把背景音樂重新壓縮成較低的位元率，縮短 Web 版下載時間。
 //
-//   pnpm compress:bgm                  壓縮 resources/audio/bgm 底下位元率高於目標的 mp3
+//   pnpm compress:bgm                  壓縮 assets/audio/bgm 底下位元率高於目標的 mp3
 //   pnpm compress:bgm --bitrate 112    指定目標位元率（kbps，預設 96）
 //
 // 原地覆寫檔案（.meta 的 uuid 不變，場景與程式的引用不受影響），已在目標位元率以下的檔案略過，
@@ -11,7 +11,7 @@ import path from 'node:path';
 import ffmpeg from 'ffmpeg-static';
 import { CLIENT_DIR, fail, info, parseArgs, run, success } from './lib/common.mjs';
 
-const BGM_DIR = path.join(CLIENT_DIR, 'assets', 'resources', 'audio', 'bgm');
+const BGM_DIR = path.join(CLIENT_DIR, 'assets', 'audio', 'bgm');
 // 位元率在目標的這個範圍內就視為已壓縮過（VBR 與標頭會讓量到的值略有出入）
 const TOLERANCE_KBPS = 8;
 

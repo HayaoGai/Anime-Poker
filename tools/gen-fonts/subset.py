@@ -24,14 +24,15 @@ from fontTools import subset
 from fontTools.ttLib import TTFont
 
 ROOT = Path(__file__).resolve().parents[2]
-OUT_DIR = ROOT / 'client' / 'assets' / 'resources' / 'fonts'
+OUT_DIR = ROOT / 'client' / 'assets' / 'common' / 'fonts'
 COVERAGE_FILE = Path(__file__).resolve().parent / 'coverage.json'
 # 檔名（不含副檔名）即 Cocos 的字型名稱；donor：缺字時補字的來源
 FONTS = {
     'tw': {'file': 'ResourceHanRoundedTW-Medium.ttf', 'donor': 'cn'},
     'cn': {'file': 'ResourceHanRoundedCN-Medium.ttf', 'donor': None},
 }
-SOURCE_GLOBS = [('client/assets/scripts', '*.ts'), ('client/assets/scenes', '*.scene'), ('client/assets/prefabs', '*.prefab')]
+# 場景與 Prefab 分散在各 Asset Bundle 的資料夾，整個 assets 底下搜尋
+SOURCE_GLOBS = [('client/assets/scripts', '*.ts'), ('client/assets', '*.scene'), ('client/assets', '*.prefab')]
 PUNCTUATION = '，。、！？：；「」『』（）《》〈〉…・—～＋－％＄＃＆＊　'
 
 
