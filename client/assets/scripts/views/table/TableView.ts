@@ -239,7 +239,7 @@ export class TableView extends ViewBase {
             if (isMe) nativeBridge.vibrate('success');
             this.winBanner?.show(nickname, isMe, true);
         });
-        vm.onNotice(({ code, nickname }) => toast.show(i18n.tCode('notice', code, { name: nickname ?? '' })));
+        vm.onNotice(({ code, nickname, multiplier }) => toast.show(i18n.tCode('notice', code, { name: nickname ?? '', multiplier: multiplier ?? 1 })));
         vm.onError(({ code }) => toast.show(i18n.tCode('error', code)));
         this.bindings.add(eventBus.on('networkChanged', (online) => !online && toast.show(t('common.offline'))));
     }
@@ -300,6 +300,7 @@ export class TableView extends ViewBase {
                 cards,
                 status,
                 isMe: index === me,
+                bigBlind: snapshot.bigBlind,
             });
         });
     }
@@ -334,7 +335,7 @@ export class TableView extends ViewBase {
         if (this.potRoot) this.potRoot.active = total > 0;
         if (this.potLabel) {
             const sides = snapshot.pots.filter((p) => p > 0).length;
-            this.potLabel.string = `${t('table.pot')} ${t('common.bb', { value: toBB(total) })}${sides > 1 ? `  (+${sides - 1})` : ''}`;
+            this.potLabel.string = `${t('table.pot')} ${t('common.bb', { value: toBB(total, snapshot.bigBlind) })}${sides > 1 ? `  (+${sides - 1})` : ''}`;
         }
     }
 

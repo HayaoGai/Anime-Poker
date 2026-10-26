@@ -16,6 +16,8 @@ export interface SeatRenderOptions {
     cards: (Card | null)[] | null;
     status: I18nKey | null;
     isMe: boolean;
+    /** 目前的大盲，籌碼以此換算成 BB */
+    bigBlind: number;
 }
 
 const TIMER_COLORS = [new Color(111, 220, 191), new Color(255, 211, 110), new Color(232, 67, 111)];
@@ -161,10 +163,10 @@ export class SeatView extends Component {
 
         this.avatar?.setAvatar(seat.avatarId);
         if (this.nickname) this.nickname.string = seat.nickname;
-        if (this.stack) this.stack.string = t('common.bb', { value: toBB(seat.stack) });
+        if (this.stack) this.stack.string = t('common.bb', { value: toBB(seat.stack, options.bigBlind) });
 
         if (this.betRoot) this.betRoot.active = seat.bet > 0;
-        if (this.betLabel) this.betLabel.string = t('common.bb', { value: toBB(seat.bet) });
+        if (this.betLabel) this.betLabel.string = t('common.bb', { value: toBB(seat.bet, options.bigBlind) });
 
         if (this.marker) {
             this.marker.node.active = options.marker !== null;

@@ -98,6 +98,8 @@ export const NoticeCode = {
     WaitingNextHand: 'WAITING_NEXT_HAND',
     /** 房間大廳中已沒有真人參賽者，房間解散（比賽中則改為比賽結束，見 GameOver） */
     RoomDissolved: 'ROOM_DISSOLVED',
+    /** 盲注升級，multiplier 為起始盲注的倍數 */
+    BlindsUp: 'BLINDS_UP',
 } as const;
 export type NoticeCode = (typeof NoticeCode)[keyof typeof NoticeCode];
 
@@ -108,7 +110,7 @@ export interface ServerPayloads {
     /** deadline 為伺服器時間（epoch ms） */
     [ServerMessage.YourTurn]: { legal: LegalActions; deadline: number };
     [ServerMessage.Error]: { code: ErrorCode };
-    [ServerMessage.Notice]: { code: NoticeCode; nickname?: string };
+    [ServerMessage.Notice]: { code: NoticeCode; nickname?: string; multiplier?: number };
     [ServerMessage.TimeSync]: { clientTime: number; serverTime: number };
     /** 沒有唯一贏家時 winnerSeat 為 -1、nickname 為空字串 */
     [ServerMessage.GameOver]: { winnerSeat: number; nickname: string };

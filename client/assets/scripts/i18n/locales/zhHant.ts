@@ -132,6 +132,7 @@ export const zhHant = {
     'notice.SEATED_AS_SPECTATOR': '牌桌已滿，以觀戰身分加入',
     'notice.WAITING_NEXT_HAND': '已坐下，下一手開始參賽',
     'notice.ROOM_DISSOLVED': '牌桌上已沒有玩家，房間解散',
+    'notice.BLINDS_UP': '盲注升級！現在是起始盲注的 {multiplier} 倍',
 } as const;
 
 export type I18nKey = keyof typeof zhHant;

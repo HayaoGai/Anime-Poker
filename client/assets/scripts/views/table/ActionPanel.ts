@@ -5,7 +5,6 @@ import { t } from '../../i18n/I18n';
 import { LocalizedLabel } from '../../i18n/LocalizedLabel';
 import { nativeBridge } from '../../native/NativeBridge';
 import type { LegalActions } from '../../shared/events';
-import { SMALL_BLIND, toBB } from '../../shared/rules';
 import type { RaiseShortcuts, TableViewModel } from '../../viewmodels/TableViewModel';
 
 const { ccclass, property, menu } = _decorator;
@@ -90,7 +89,7 @@ export class ActionPanel extends ViewBase {
         if (this.raisePanel) this.raisePanel.active = false;
         if (!legal || !this.vm) return;
 
-        this.callLabel?.setKey(legal.canCheck ? 'table.check' : 'table.call', { amount: t('common.bb', { value: toBB(legal.callAmount) }) });
+        this.callLabel?.setKey(legal.canCheck ? 'table.check' : 'table.call', { amount: t('common.bb', { value: this.vm.bb(legal.callAmount) }) });
         if (this.raiseButton) this.raiseButton.node.active = legal.canRaise;
         if (legal.canRaise) {
             this.shortcuts = this.vm.raiseShortcuts(legal);
@@ -115,30 +114,31 @@ export class ActionPanel extends ViewBase {
 
     private onSlide(slider: Slider): void {
         const legal = this.legal;
-        if (!legal) return;
+        if (!legal || !this.vm) return;
         const raw = legal.minRaiseTo + (legal.maxRaiseTo - legal.minRaiseTo) * slider.progress;
         // 以小盲為單位，畫面上的 BB 數值才會是 0.5 的倍數
-        this.setRaise(Math.round(raw / SMALL_BLIND) * SMALL_BLIND, false);
+        const step = this.vm.smallBlind;
+        this.setRaise(Math.round(raw / step) * step, false);
     }
 
     private setRaise(amount: number, moveSlider = true): void {
         const legal = this.legal;
-        if (!legal) return;
+        if (!legal || !this.vm) return;
         this.raiseTo = Math.min(legal.maxRaiseTo, Math.max(legal.minRaiseTo, amount));
         if (moveSlider && this.slider) {
             const span = legal.maxRaiseTo - legal.minRaiseTo;
             this.slider.progress = span > 0 ? (this.raiseTo - legal.minRaiseTo) / span : 1;
         }
-        if (this.amountLabel) this.amountLabel.string = t('common.bb', { value: toBB(this.raiseTo) });
+        if (this.amountLabel) this.amountLabel.string = t('common.bb', { value: this.vm.bb(this.raiseTo) });
         this.updateRaiseLabel(this.raisePanel?.active ?? false);
     }
 
     private updateRaiseLabel(confirming: boolean): void {
         const legal = this.legal;
-        if (!legal || !this.raiseLabel) return;
+        if (!legal || !this.raiseLabel || !this.vm) return;
         const allIn = this.raiseTo >= legal.maxRaiseTo || legal.minRaiseTo >= legal.maxRaiseTo;
         if (allIn && (confirming || legal.minRaiseTo >= legal.maxRaiseTo)) this.raiseLabel.setKey('table.allIn');
-        else if (confirming) this.raiseLabel.setKey('table.raiseTo', { amount: t('common.bb', { value: toBB(this.raiseTo) }) });
+        else if (confirming) this.raiseLabel.setKey('table.raiseTo', { amount: t('common.bb', { value: this.vm.bb(this.raiseTo) }) });
         else this.raiseLabel.setKey('table.raise');
     }
 }

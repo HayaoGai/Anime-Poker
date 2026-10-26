@@ -1,4 +1,4 @@
-import { MAX_SEATS } from '../rules';
+import { BIG_BLIND, MAX_SEATS, SMALL_BLIND } from '../rules';
 
 /**
  * Table 讀寫的狀態陣列。伺服器是 Colyseus 的 ArraySchema（變更會自動同步給客戶端），
@@ -41,6 +41,8 @@ export interface TableState {
     buttonSeat: number;
     smallBlindSeat: number;
     bigBlindSeat: number;
+    smallBlind: number;
+    bigBlind: number;
     street: string;
     board: StateList<string>;
     pots: StateList<number>;
@@ -85,6 +87,8 @@ export function createPlainTableState(): TableState {
         buttonSeat: -1,
         smallBlindSeat: -1,
         bigBlindSeat: -1,
+        smallBlind: SMALL_BLIND,
+        bigBlind: BIG_BLIND,
         street: '',
         board: plainList<string>(),
         pots: plainList<number>(),

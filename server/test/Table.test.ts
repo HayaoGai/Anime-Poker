@@ -2,7 +2,7 @@ import type { Card } from '@shared/cards';
 import { ErrorCode } from '@shared/errors';
 import { ActionType } from '@shared/poker';
 import { ClientMessage, NoticeCode, RoomPhase, ServerMessage } from '@shared/protocol';
-import { STARTING_STACK } from '@shared/rules';
+import { BIG_BLIND, BLIND_MULTIPLIERS, SMALL_BLIND, STARTING_STACK, blindsForLevel } from '@shared/rules';
 import { describe, expect, it } from 'vitest';
 import type { Table } from '@shared/table/Table';
 import { riggedDeck, seededRng } from './helpers';
@@ -226,6 +226,55 @@ describe('行動與計時', () => {
     });
 });
 
+describe('盲注升級', () => {
+    it('依級數放大起始盲注，到最後一級後不再上升', () => {
+        expect(blindsForLevel(0)).toEqual({ multiplier: 1, smallBlind: SMALL_BLIND, bigBlind: BIG_BLIND });
+        expect(blindsForLevel(1)).toEqual({ multiplier: 2, smallBlind: SMALL_BLIND * 2, bigBlind: BIG_BLIND * 2 });
+        const last = BLIND_MULTIPLIERS[BLIND_MULTIPLIERS.length - 1];
+        expect(blindsForLevel(1000).multiplier).toBe(last);
+    });
+
+    /** 每手都由輪到的人逾時棄牌，記錄每一手的大盲 */
+    function bigBlindsPerHand(players: number, hands: number): number[] {
+        const { table, scheduler } = createTable({ rng: seededRng(7) });
+        table.join('p0', player('P0'));
+        for (let i = 1; i < players; i++) table.join(`p${i}`, player(`P${i}`));
+        table.handleMessage('p0', ClientMessage.StartGame, {});
+        const result: number[] = [];
+        for (let hand = 1; hand <= hands; hand++) {
+            until(scheduler, () => table.state.handNumber === hand && table.state.turnSeat !== -1, 600_000);
+            result.push(table.state.bigBlind);
+        }
+        return result;
+    }
+
+    it('每一級的手數等於參賽人數', () => {
+        const b = BIG_BLIND;
+        expect(bigBlindsPerHand(3, 7)).toEqual([b, b, b, b * 2, b * 2, b * 2, b * 3]);
+        expect(bigBlindsPerHand(2, 5)).toEqual([b, b, b * 2, b * 2, b * 3]);
+    });
+
+    it('升級的那一手以新盲注下注，並廣播通知', () => {
+        const { table, output, scheduler } = createTable({ rng: seededRng(7) });
+        table.join('alice', player('Alice'));
+        table.join('bob', player('Bob'));
+        table.handleMessage('alice', ClientMessage.StartGame, {});
+        expect(table.state).toMatchObject({ smallBlind: SMALL_BLIND, bigBlind: BIG_BLIND });
+
+        // 兩人桌：第 3 手升級
+        until(scheduler, () => table.state.handNumber === 3 && table.state.turnSeat !== -1, 600_000);
+        expect(table.state).toMatchObject({ smallBlind: SMALL_BLIND * 2, bigBlind: BIG_BLIND * 2, currentBet: BIG_BLIND * 2 });
+        expect(output.broadcasts(ServerMessage.Notice).filter((m) => m.payload.code === NoticeCode.BlindsUp).map((m) => m.payload)).toEqual([
+            { code: NoticeCode.BlindsUp, multiplier: 2 },
+        ]);
+        const blinds = output
+            .broadcasts(ServerMessage.HandEvent)
+            .filter((m) => m.payload.type === 'blindPosted' && m.payload.handNumber === 3)
+            .map((m) => m.payload.amount);
+        expect(blinds).toEqual([SMALL_BLIND * 2, BIG_BLIND * 2]);
+    });
+});
+
 describe('離桌與房主', () => {
     it('牌局中離桌視為棄牌，房主轉移給下一位真人，座位在這手結束後清空', () => {
         const { table, output, scheduler } = createTable({ rng: () => 0 });
@@ -414,7 +463,8 @@ describe('完整模擬', () => {
         let handsChecked = 0;
         let lastTurnMessages = 0;
 
-        for (let step = 0; step < 200_000 && handsChecked < 40 && !output.dissolved && table.state.phase === RoomPhase.Playing; step++) {
+        // 盲注持續升級，比賽一定會在有限手數內結束
+        for (let step = 0; step < 200_000 && !output.dissolved; step++) {
             scheduler.advance(200);
 
             // 真人：保守打法，能過牌就過牌、小額才跟注，其餘棄牌（避免太快輸光，讓模擬涵蓋更多手）
@@ -422,7 +472,7 @@ describe('完整模擬', () => {
             if (turns.length > lastTurnMessages && table.state.turnSeat === 0) {
                 lastTurnMessages = turns.length;
                 const { legal } = turns.at(-1)!.payload;
-                act(table, 'human', legal.canCheck ? ActionType.Check : legal.callAmount <= 4 ? ActionType.Call : ActionType.Fold);
+                act(table, 'human', legal.canCheck ? ActionType.Check : legal.callAmount <= table.state.bigBlind * 2 ? ActionType.Call : ActionType.Fold);
             }
 
             const ended = output.broadcasts(ServerMessage.HandEvent).filter((m) => m.payload.type === 'handEnded').length;
@@ -433,6 +483,7 @@ describe('完整模擬', () => {
             }
         }
 
-        expect(handsChecked).toBe(40);
+        expect(output.dissolved).toBe(true);
+        expect(handsChecked).toBeGreaterThan(10);
     });
 });

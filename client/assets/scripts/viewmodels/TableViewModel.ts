@@ -6,7 +6,7 @@ import type { Card } from '../shared/cards';
 import type { LegalActions } from '../shared/events';
 import { ActionType, type PlayerAction } from '../shared/poker';
 import { ClientMessage, ServerMessage, type ServerPayloads } from '../shared/protocol';
-import { MAX_SEATS, toBB } from '../shared/rules';
+import { BIG_BLIND, MAX_SEATS, SMALL_BLIND, toBB } from '../shared/rules';
 
 export type HandEventPayload = ServerPayloads[typeof ServerMessage.HandEvent];
 
@@ -101,6 +101,20 @@ export class TableViewModel extends ViewModel {
         return this.session.timeSync.remaining(deadline);
     }
 
+    /** 目前的盲注（隨手數升級） */
+    get smallBlind(): number {
+        return this.snapshot.value?.smallBlind ?? SMALL_BLIND;
+    }
+
+    get bigBlind(): number {
+        return this.snapshot.value?.bigBlind ?? BIG_BLIND;
+    }
+
+    /** 籌碼 → 以目前大盲換算的「12.5 BB」數值部分 */
+    bb(chips: number): number {
+        return toBB(chips, this.bigBlind);
+    }
+
     /** 桌面上所有籌碼：已收進底池 + 本輪所有人的下注 */
     totalPot(): number {
         const s = this.snapshot.value;
@@ -162,6 +176,3 @@ export class TableViewModel extends ViewModel {
         this.session.send(ClientMessage.Action, action);
     }
 }
-
-/** 籌碼 → 「12.5 BB」的數值部分 */
-export const bb = (chips: number) => toBB(chips);

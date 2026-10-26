@@ -130,4 +130,5 @@ export const zhHans: Record<I18nKey, string> = {
     'notice.SEATED_AS_SPECTATOR': '牌桌已满，以观战身份加入',
     'notice.WAITING_NEXT_HAND': '已坐下，下一手开始参赛',
     'notice.ROOM_DISSOLVED': '牌桌上已没有玩家，房间解散',
+    'notice.BLINDS_UP': '盲注升级！现在是起始盲注的 {multiplier} 倍',
 };

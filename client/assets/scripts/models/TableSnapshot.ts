@@ -30,6 +30,8 @@ export interface TableSnapshot {
     buttonSeat: number;
     smallBlindSeat: number;
     bigBlindSeat: number;
+    smallBlind: number;
+    bigBlind: number;
     street: string;
     board: Card[];
     pots: number[];
@@ -70,6 +72,8 @@ export function toTableSnapshot(state: any): TableSnapshot {
         buttonSeat: state.buttonSeat,
         smallBlindSeat: state.smallBlindSeat,
         bigBlindSeat: state.bigBlindSeat,
+        smallBlind: state.smallBlind,
+        bigBlind: state.bigBlind,
         street: state.street,
         board: list<Card>(state.board),
         pots: list<number>(state.pots),

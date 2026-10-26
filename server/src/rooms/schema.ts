@@ -1,5 +1,5 @@
 import { schema, t, type SchemaType } from '@colyseus/schema';
-import { MAX_SEATS } from '@shared/rules';
+import { BIG_BLIND, MAX_SEATS, SMALL_BLIND } from '@shared/rules';
 
 /**
  * 同步給所有人（含觀戰者）的狀態，只放公開資訊。
@@ -40,6 +40,9 @@ export const PokerState = schema(
         buttonSeat: t.number().default(-1),
         smallBlindSeat: t.number().default(-1),
         bigBlindSeat: t.number().default(-1),
+        /** 目前這手（或下一手）的盲注，隨手數升級；畫面上的 BB 以 bigBlind 換算 */
+        smallBlind: t.number().default(SMALL_BLIND),
+        bigBlind: t.number().default(BIG_BLIND),
         /** 目前的街；不在牌局中時為空字串 */
         street: t.string().default(''),
         board: t.array('string'),

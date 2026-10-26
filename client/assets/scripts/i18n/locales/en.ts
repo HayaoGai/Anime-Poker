@@ -130,4 +130,5 @@ export const en: Record<I18nKey, string> = {
     'notice.SEATED_AS_SPECTATOR': 'The table is full. Joined as a spectator.',
     'notice.WAITING_NEXT_HAND': 'Seated. You will join the next hand.',
     'notice.ROOM_DISSOLVED': 'No players left. The room has been closed.',
+    'notice.BLINDS_UP': 'Blinds up! Now {multiplier}x the starting blinds',
 };

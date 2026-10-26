@@ -14,7 +14,7 @@ import {
     type RoomMetadata,
     type ServerPayloads,
 } from '../protocol';
-import { ACTION_TIMEOUT_MS, BIG_BLIND, MAX_SEATS, MIN_PLAYERS_TO_START, SMALL_BLIND, STARTING_STACK } from '../rules';
+import { ACTION_TIMEOUT_MS, BLIND_MULTIPLIERS, MAX_SEATS, MIN_PLAYERS_TO_START, STARTING_STACK, blindsForLevel } from '../rules';
 import { decideBotAction } from '../engine/BotAI';
 import { Deck } from '../engine/Deck';
 import { HandController } from '../engine/HandController';
@@ -109,6 +109,9 @@ export class Table<S extends TableState = TableState> {
 
     private hand: HandController | null = null;
     private previousButton: number | null = null;
+    /** 目前的盲注級數，以及這一級已經打了幾手 */
+    private blindLevel = 0;
+    private handsAtLevel = 0;
     /** 這手牌結束後要清空的座位（牌局中離桌、改為觀戰） */
     private readonly vacateAfterHand = new Set<number>();
 
@@ -291,6 +294,8 @@ export class Table<S extends TableState = TableState> {
         this.state.phase = RoomPhase.Playing;
         this.state.handNumber = 0;
         this.previousButton = null;
+        this.blindLevel = 0;
+        this.handsAtLevel = 0;
         this.refreshListing();
         this.startHand();
         return null;
@@ -469,6 +474,18 @@ export class Table<S extends TableState = TableState> {
         this.previousButton = button;
 
         this.state.handNumber++;
+        // 這一級打滿一圈（手數達到目前參賽人數）就升級；有人輸光後一圈變短，升級跟著變快
+        if (this.handsAtLevel >= seats.length && this.blindLevel < BLIND_MULTIPLIERS.length - 1) {
+            this.blindLevel++;
+            this.handsAtLevel = 0;
+        }
+        this.handsAtLevel++;
+        const blinds = blindsForLevel(this.blindLevel);
+        if (blinds.bigBlind !== this.state.bigBlind) {
+            this.state.smallBlind = blinds.smallBlind;
+            this.state.bigBlind = blinds.bigBlind;
+            if (this.blindLevel > 0) this.output.broadcast(ServerMessage.Notice, { code: NoticeCode.BlindsUp, multiplier: blinds.multiplier });
+        }
         this.state.board.clear();
         this.state.pots.clear();
         this.state.currentBet = 0;
@@ -484,8 +501,8 @@ export class Table<S extends TableState = TableState> {
         this.hand = new HandController({
             seats: playable.map(({ s, seat }) => ({ seat, stack: s.stack })),
             button,
-            smallBlind: SMALL_BLIND,
-            bigBlind: BIG_BLIND,
+            smallBlind: blinds.smallBlind,
+            bigBlind: blinds.bigBlind,
             deck: this.createDeck(),
         });
         this.enqueue(this.hand.start(), false);
@@ -559,7 +576,7 @@ export class Table<S extends TableState = TableState> {
                 seats[event.seat].stack -= event.amount;
                 seats[event.seat].bet += event.amount;
                 seats[event.seat].allIn = event.allIn;
-                this.state.currentBet = Math.max(this.state.currentBet, BIG_BLIND);
+                this.state.currentBet = Math.max(this.state.currentBet, this.state.bigBlind);
                 break;
             case 'holeCardsDealt':
                 for (const seat of event.order) {
@@ -654,7 +671,7 @@ export class Table<S extends TableState = TableState> {
                 pot: hand.potAmounts.reduce((a, b) => a + b, 0) + table.reduce((sum, p) => sum + p.committed, 0),
                 currentBet: hand.currentBet,
                 opponents: table.filter((p) => p.seat !== seat && !p.folded).length,
-                bigBlind: BIG_BLIND,
+                bigBlind: this.state.bigBlind,
             },
             this.rng,
         );
