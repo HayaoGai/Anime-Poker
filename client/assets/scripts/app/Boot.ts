@@ -1,13 +1,16 @@
-import { _decorator } from 'cc';
+import { _decorator, AudioClip } from 'cc';
+import { AUDIO_BUNDLE, bgmPath } from '../core/AudioManager';
 import { loadBundles, preloadScene } from '../core/Bundles';
+import { loadResource } from '../core/ResourceCache';
 import { labelFont } from '../i18n/LabelFont';
 import { initApp } from './App';
 
 const { ccclass } = _decorator;
 
-/** 進度的配重：bundle 設定檔很小，標題場景的素材佔大部分；介面字型約 0.3MB */
-const WEIGHT_BUNDLES = 0.1;
-const WEIGHT_SCENE = 0.75;
+/** 進度的配重（約略依檔案大小）：bundle 設定檔很小；標題場景的素材約 0.7MB、標題 BGM 約 1.8MB、介面字型約 0.3MB */
+const WEIGHT_BUNDLES = 0.05;
+const WEIGHT_SCENE = 0.25;
+const WEIGHT_BGM = 0.55;
 const WEIGHT_FONT = 0.15;
 
 /**
@@ -17,7 +20,7 @@ const WEIGHT_FONT = 0.15;
 @ccclass('Boot')
 export class Boot {
     /**
-     * 初始化全域服務，載入標題畫面所需的包、標題場景的素材與目前語系的介面字型；
+     * 初始化全域服務，載入標題畫面所需的包、標題場景的素材、標題 BGM 與目前語系的介面字型；
      * 完成後由 Loading 切換到標題畫面。onProgress 回報 0–1 的整體進度。
      */
     static async run(onProgress: (ratio: number) => void): Promise<void> {
@@ -26,11 +29,19 @@ export class Boot {
         let bundles = 0;
         let scene = 0;
         let font = 0;
-        const report = (): void => onProgress(bundles * WEIGHT_BUNDLES + scene * WEIGHT_SCENE + font * WEIGHT_FONT);
+        let bgm = 0;
+        const report = (): void =>
+            onProgress(bundles * WEIGHT_BUNDLES + scene * WEIGHT_SCENE + bgm * WEIGHT_BGM + font * WEIGHT_FONT);
 
         // 介面字型屬於 common 包，initApp 時就開始載入（完整字型由標題畫面開始載入）
         const fontReady = labelFont.ready().then(() => {
             font = 1;
+            report();
+        });
+        // 標題 BGM 載完（下載並解碼）才進入標題畫面，第一次點擊時就能立刻播放；
+        // Web 的瀏覽器規定使用者點擊前不能發出聲音，因此標題畫面要等第一次點擊才會出聲
+        const bgmReady = loadResource(AUDIO_BUNDLE, bgmPath('title'), AudioClip).then(() => {
+            bgm = 1;
             report();
         });
         await loadBundles(['common', 'title', 'audio']);
@@ -43,6 +54,6 @@ export class Boot {
         });
         scene = 1;
         report();
-        await fontReady;
+        await Promise.all([fontReady, bgmReady]);
     }
 }

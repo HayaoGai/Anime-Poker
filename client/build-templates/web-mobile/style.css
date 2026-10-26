@@ -75,9 +75,10 @@ canvas {
   justify-content: center;
   background-color: #000;
   pointer-events: none;
-  transition: opacity 0.4s ease;
+  transition: opacity 0.5s ease;
 }
 
+/* 淡出回黑幕（0.5 秒）：整個啟動畫面淡出，露出底下同樣是黑色的遊戲畫面 */
 .splash.hide {
   opacity: 0;
 }
@@ -88,20 +89,30 @@ canvas {
   max-width: 300px;
   height: auto;
   opacity: 0;
-  transform: scale(0.8);
+  transform: scale(0.7);
 }
 
+/* 由黑幕淡入（0.5 秒），同時由 0.7 倍放大到原尺寸（1.5 秒） */
 .splash.show .splash-author {
-  animation: splash-author-in 0.8s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+  animation:
+    splash-author-fade-in 0.5s ease-out forwards,
+    splash-author-grow 1.5s cubic-bezier(0.22, 1, 0.36, 1) forwards;
 }
 
-@keyframes splash-author-in {
+@keyframes splash-author-fade-in {
   from {
     opacity: 0;
-    transform: scale(0.8);
   }
   to {
     opacity: 1;
+  }
+}
+
+@keyframes splash-author-grow {
+  from {
+    transform: scale(0.7);
+  }
+  to {
     transform: scale(1);
   }
 }

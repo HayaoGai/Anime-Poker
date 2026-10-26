@@ -14,7 +14,7 @@ const DEFERRED_BUNDLES: readonly BundleName[] = ['lobby', 'avatars', 'table'];
 
 const UI_SFX: readonly SfxName[] = ['ui_click', 'ui_open', 'ui_close', 'notice'];
 
-/** 標題畫面：完整字型（大廳的暱稱要用）、其餘的包、大廳場景、大廳會用到的介面音效、頭像選項、立繪與選擇頭像的人聲 */
+/** 標題畫面：完整字型（大廳的暱稱要用）、其餘的包、大廳場景、大廳會用到的介面音效、頭像選項、立繪與選擇頭像的人聲，最後是牌桌 BGM */
 export function preloadForLobby(): void {
     labelFont.loadFullFont();
     void loadBundles(DEFERRED_BUNDLES);
@@ -26,9 +26,11 @@ export function preloadForLobby(): void {
         preloadResources(AVATAR_BUNDLE, [avatar.texture[AvatarVariant.Full]], SpriteFrame);
         preloadResources(AVATAR_BUNDLE, [avatar.voice.select], AudioClip);
     }
+    // 牌桌 BGM 是最大的檔案（約 3.6MB），排在最後，不與大廳的圖片、人聲搶頻寬
+    preloadResources(AUDIO_BUNDLE, [bgmPath('table')], AudioClip);
 }
 
-/** 大廳：牌桌場景、牌面與籌碼、其餘音效、所有頭像的立繪與行動人聲，最後是牌桌 BGM */
+/** 大廳：牌桌場景、牌面與籌碼、其餘音效、所有頭像的立繪與行動人聲（牌桌 BGM 已在標題畫面排入） */
 export function preloadForTable(): void {
     void preloadScene('Table');
     // 引擎的 preloadDir 不會下載圖片，改為直接載入（與 CardFrames、TableView 載入同一批，結果共用快取）
@@ -38,8 +40,6 @@ export function preloadForTable(): void {
     });
     preloadResources(AUDIO_BUNDLE, SFX_NAMES.map(sfxPath), AudioClip);
     for (const avatar of AVATARS) preloadAvatarForTable(avatar.id);
-    // 牌桌 BGM 是最大的檔案（數 MB），排在最後，不與人聲、圖片搶頻寬
-    preloadResources(AUDIO_BUNDLE, [bgmPath('table')], AudioClip);
 }
 
 /** 牌桌座位的立繪與行動人聲；urgent 用於已入座的頭像，排到佇列最前面 */

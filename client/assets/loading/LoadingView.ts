@@ -12,11 +12,15 @@ interface SplashHost {
     hideSplash?: () => Promise<void>;
 }
 
-/** 作者圖：淡入並由 0.8 倍放大的秒數、含淡入的最短停留秒數、淡出秒數（與 HTML 啟動畫面一致） */
-const INTRO_IN = 0.8;
-const INTRO_MIN_SHOW = 1.8;
-const INTRO_OUT = 0.4;
-const INTRO_SCALE_FROM = 0.8;
+/**
+ * 作者圖（與 HTML 啟動畫面一致）：由黑幕淡入，同時由 0.7 倍放大到原尺寸；
+ * 淡入完成後停留 INTRO_HOLD 秒再淡出回黑幕
+ */
+const INTRO_FADE_IN = 0.5;
+const INTRO_SCALE_FROM = 0.7;
+const INTRO_SCALE_TIME = 1.5;
+const INTRO_HOLD = 3;
+const INTRO_FADE_OUT = 0.5;
 /** 進度條淡入淡出的秒數 */
 const BAR_FADE = 0.25;
 /** 進度條追上實際進度的速度：每秒拉近差距的比例，以及每秒至少前進的量 */
@@ -29,7 +33,7 @@ const RETRY_DELAY = 2000;
 
 /**
  * 首場景（main 包只有這個場景與本腳本）：
- *   1. 作者圖淡入並由 0.8 倍放大，停留後淡出。Web 由 HTML 啟動畫面顯示（引擎載入前就出現），
+ *   1. 作者圖淡入並由 0.7 倍放大，停留後淡出。Web 由 HTML 啟動畫面顯示（引擎載入前就出現），
  *      原生平台與編輯器預覽沒有 HTML 啟動畫面，改由本場景播放同樣的動畫。
  *   2. 同時載入 scripts 包，交由其中的 Boot 載入標題畫面所需的包、素材與字型。
  *   3. 作者圖結束時還沒載完才顯示進度條，載完後進入標題畫面。
@@ -155,9 +159,10 @@ export class LoadingView extends Component {
     private updateIntro(step: number): void {
         this.introTime += step;
         const t = this.introTime;
-        const enter = easing.quintOut(Math.min(t / INTRO_IN, 1));
-        const leave = Math.min(Math.max((t - INTRO_MIN_SHOW) / INTRO_OUT, 0), 1);
-        const scale = INTRO_SCALE_FROM + (1 - INTRO_SCALE_FROM) * enter;
+        const enter = easing.sineOut(Math.min(t / INTRO_FADE_IN, 1));
+        const grow = easing.quintOut(Math.min(t / INTRO_SCALE_TIME, 1));
+        const leave = Math.min(Math.max((t - INTRO_FADE_IN - INTRO_HOLD) / INTRO_FADE_OUT, 0), 1);
+        const scale = INTRO_SCALE_FROM + (1 - INTRO_SCALE_FROM) * grow;
         this.author?.setScale(scale, scale, 1);
         if (this.authorOpacity) this.authorOpacity.opacity = 255 * enter * (1 - leave);
         if (leave >= 1) {

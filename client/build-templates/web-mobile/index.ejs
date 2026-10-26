@@ -40,8 +40,8 @@
 <body>
   <!--
     啟動畫面：在 Cocos 引擎載入之前就顯示（引擎、腳本都還在下載時畫面不會一片空白）。
-    作者圖下載完成後淡入並由 0.8 倍放大到原尺寸；遊戲就緒後呼叫 window.hideSplash() 收起，
-    至少停留 MIN_SHOW_MS 才淡出，淡出後移除節點。
+    作者圖下載完成後由黑幕淡入（0.5 秒），同時由 0.7 倍放大到原尺寸（1.5 秒，見 style.css）；
+    遊戲就緒後呼叫 window.hideSplash() 收起：從出現起至少停留 MIN_SHOW_MS（淡入 0.5 秒 + 停留 3 秒）才淡出回黑幕，淡出後移除節點。
     原生平台由 Loading 場景播放同樣的動畫（assets/loading/LoadingView.ts），作者圖與 assets/loading/author.jpg 相同，換圖時兩處一起換。
   -->
   <div id="Splash" class="splash">
@@ -49,8 +49,8 @@
   </div>
   <script>
     (function () {
-      var MIN_SHOW_MS = 1800;
-      var FADE_OUT_MS = 400;
+      var MIN_SHOW_MS = 3500;
+      var FADE_OUT_MS = 500;
       var splash = document.getElementById('Splash');
       var author = document.getElementById('SplashAuthor');
       var shownAt = 0;
