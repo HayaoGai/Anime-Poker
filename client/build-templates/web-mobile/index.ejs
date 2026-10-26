@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+
+  <title><%= projectName %></title>
+
+  <!--http://www.html5rocks.com/en/mobile/mobifying/-->
+  <meta name="viewport"
+        content="width=device-width,user-scalable=no,initial-scale=1,minimum-scale=1,maximum-scale=1,minimal-ui=true"/>
+
+  <!--https://developer.apple.com/library/safari/documentation/AppleApplications/Reference/SafariHTMLRef/Articles/MetaTags.html-->
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="format-detection" content="telephone=no">
+  <meta name="theme-color" content="#000000">
+
+  <!-- force webkit on 360 -->
+  <meta name="renderer" content="webkit"/>
+  <meta name="force-rendering" content="webkit"/>
+  <!-- force edge on IE -->
+  <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1"/>
+  <meta name="msapplication-tap-highlight" content="no">
+
+  <!-- force full screen on some browser -->
+  <meta name="full-screen" content="yes"/>
+  <meta name="x5-fullscreen" content="true"/>
+  <meta name="360-fullscreen" content="true"/>
+
+  <!--fix fireball/issues/3568 -->
+  <!--<meta name="browsermode" content="application">-->
+  <meta name="x5-page-mode" content="app">
+
+  <!-- 啟動畫面的作者圖與樣式表同時下載，不必等解析到 body -->
+  <link rel="preload" href="splash/author.jpg" as="image">
+  <link rel="stylesheet" type="text/css" href="<%= cssUrl %>"/>
+
+</head>
+<body>
+  <!--
+    啟動畫面：在 Cocos 引擎載入之前就顯示（引擎、腳本都還在下載時畫面不會一片空白）。
+    作者圖下載完成後淡入並由 0.8 倍放大到原尺寸；遊戲就緒後呼叫 window.hideSplash() 收起，
+    至少停留 MIN_SHOW_MS 才淡出，淡出後移除節點。作者圖與 assets 內的同一張圖，換圖時兩處一起換。
+  -->
+  <div id="Splash" class="splash">
+    <img id="SplashAuthor" class="splash-author" src="splash/author.jpg" alt="" draggable="false">
+  </div>
+  <script>
+    (function () {
+      var MIN_SHOW_MS = 1800;
+      var FADE_OUT_MS = 400;
+      var splash = document.getElementById('Splash');
+      var author = document.getElementById('SplashAuthor');
+      var shownAt = 0;
+      var hiding = null;
+
+      function show() {
+        if (shownAt) return;
+        shownAt = Date.now();
+        splash.className += ' show';
+      }
+      if (author.complete) show();
+      else author.onload = author.onerror = show;
+
+      window.hideSplash = function () {
+        if (!hiding) {
+          hiding = new Promise(function (resolve) {
+            // 作者圖還沒出現（下載中）就從現在起算
+            var wait = Math.max(0, (shownAt || Date.now()) + MIN_SHOW_MS - Date.now());
+            setTimeout(function () {
+              splash.className += ' hide';
+              setTimeout(function () {
+                if (splash.parentNode) splash.parentNode.removeChild(splash);
+                resolve();
+              }, FADE_OUT_MS);
+            }, wait);
+          });
+        }
+        return hiding;
+      };
+    })();
+  </script>
+
+  <div id="GameDiv" cc_exact_fit_screen="true">
+      <div id="Cocos3dGameContainer">
+        <canvas id="GameCanvas" oncontextmenu="event.preventDefault()" tabindex="99"></canvas>
+      </div>
+    </div>
+  <%- include(cocosTemplate, {}) %>
+</body>
+</html>

@@ -31,4 +31,7 @@ export function initApp(): void {
     game.on(Game.EVENT_SHOW, () => eventBus.emit('appResumed'));
     eventBus.on('appPaused', () => audio.pauseAll());
     eventBus.on('appResumed', () => audio.resumeAll());
+
+    // Web：第一個場景就緒後收起 HTML 啟動畫面（build-templates/web-mobile/index.ejs）
+    (globalThis as { hideSplash?: () => Promise<void> }).hideSplash?.();
 }

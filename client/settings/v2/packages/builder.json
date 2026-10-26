@@ -18,5 +18,26 @@
         }
       }
     }
-  }
+  },
+  "splash-setting": {
+    "displayRatio": 1,
+    "totalTime": 0,
+    "logo": {
+      "type": "none",
+      "image": ""
+    },
+    "background": {
+      "type": "default",
+      "color": {
+        "x": 0,
+        "y": 0,
+        "z": 0,
+        "w": 1
+      },
+      "image": ""
+    },
+    "watermarkLocation": "default",
+    "autoFit": true
+  },
+  "hasSetSplash": true
 }
