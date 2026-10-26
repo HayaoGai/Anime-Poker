@@ -129,6 +129,10 @@
     "type": "sprite-frame",
     "fixAlphaTransparencyArtifacts": false,
     "hasAlpha": true,
-    "redirect": "ec1e8e71-6c42-4787-a0e2-42bbe1315617@6c48a"
+    "redirect": "ec1e8e71-6c42-4787-a0e2-42bbe1315617@6c48a",
+    "compressSettings": {
+      "useCompressTexture": true,
+      "presetId": "webp-q90"
+    }
   }
 }
