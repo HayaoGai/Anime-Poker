@@ -549,7 +549,7 @@ export class TableView extends ViewBase {
 
     // ---------------------------------------------------------------- 選單、離開、觀戰、分享
 
-    /** 暫停選單；離線模式在選單與接著的確認框開啟期間暫停牌局 */
+    /** 暫停選單；離線模式在選單開啟期間暫停牌局 */
     private async openMenu(): Promise<void> {
         const vm = this.vm;
         if (!vm || !this.pauseMenuPopup || popups.count > 0 || this.leavingScene) return;
@@ -573,9 +573,12 @@ export class TableView extends ViewBase {
             this.backToLobby();
             return;
         }
-        if (!this.confirmPopup) return;
-        const ok = await popups.show<boolean, ConfirmPopup>(this.confirmPopup, (p) => p.setup({ message: 'table.leaveConfirm' }));
-        if (!ok) return;
+        // 離線模式不確認，直接離開
+        if (!this.vm?.offline) {
+            if (!this.confirmPopup) return;
+            const ok = await popups.show<boolean, ConfirmPopup>(this.confirmPopup, (p) => p.setup({ message: 'table.leaveConfirm' }));
+            if (!ok) return;
+        }
         await this.vm?.leave();
         this.backToLobby();
     }
