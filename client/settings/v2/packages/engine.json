@@ -36,7 +36,7 @@
             "_value": false
           },
           "rich-text": {
-            "_value": true
+            "_value": false
           },
           "mask": {
             "_value": true
@@ -48,7 +48,7 @@
             "_value": false
           },
           "affine-transform": {
-            "_value": true
+            "_value": false
           },
           "ui": {
             "_value": true
@@ -98,13 +98,13 @@
             "_value": false
           },
           "intersection-2d": {
-            "_value": true
+            "_value": false
           },
           "primitive": {
             "_value": false
           },
           "profiler": {
-            "_value": true
+            "_value": false
           },
           "occlusion-query": {
             "_value": false
@@ -192,7 +192,6 @@
         },
         "includeModules": [
           "2d",
-          "affine-transform",
           "animation",
           "audio",
           "base",
@@ -200,11 +199,8 @@
           "gfx-webgl",
           "gfx-webgl2",
           "graphics",
-          "intersection-2d",
           "mask",
           "particle-2d",
-          "profiler",
-          "rich-text",
           "tween",
           "ui",
           "websocket"

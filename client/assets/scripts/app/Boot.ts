@@ -5,10 +5,10 @@ import { initApp } from './App';
 
 const { ccclass } = _decorator;
 
-/** 進度的配重：bundle 設定檔很小，標題場景的素材與字型（約 3MB）佔大部分 */
+/** 進度的配重：bundle 設定檔很小，標題場景的素材佔大部分；介面字型約 0.3MB */
 const WEIGHT_BUNDLES = 0.1;
-const WEIGHT_SCENE = 0.5;
-const WEIGHT_FONT = 0.4;
+const WEIGHT_SCENE = 0.75;
+const WEIGHT_FONT = 0.15;
 
 /**
  * scripts 包的進入點。Loading 場景位於 main 包，不能直接 import 這裡的模組，
@@ -17,7 +17,7 @@ const WEIGHT_FONT = 0.4;
 @ccclass('Boot')
 export class Boot {
     /**
-     * 初始化全域服務，載入標題畫面所需的包、標題場景的素材與目前語系的字型；
+     * 初始化全域服務，載入標題畫面所需的包、標題場景的素材與目前語系的介面字型；
      * 完成後由 Loading 切換到標題畫面。onProgress 回報 0–1 的整體進度。
      */
     static async run(onProgress: (ratio: number) => void): Promise<void> {
@@ -28,7 +28,7 @@ export class Boot {
         let font = 0;
         const report = (): void => onProgress(bundles * WEIGHT_BUNDLES + scene * WEIGHT_SCENE + font * WEIGHT_FONT);
 
-        // 字型屬於 common 包，initApp 時就開始載入
+        // 介面字型屬於 common 包，initApp 時就開始載入（完整字型由標題畫面開始載入）
         const fontReady = labelFont.ready().then(() => {
             font = 1;
             report();

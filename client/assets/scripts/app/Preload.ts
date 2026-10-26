@@ -3,6 +3,7 @@ import { AVATAR_BUNDLE, AVATARS, avatarById, AvatarVariant, VOICE_ACTIONS } from
 import { AUDIO_BUNDLE, bgmPath, SFX_NAMES, sfxPath, type SfxName } from '../core/AudioManager';
 import { loadBundle, loadBundles, preloadScene, type BundleName } from '../core/Bundles';
 import { preloadResources } from '../core/ResourceCache';
+import { labelFont } from '../i18n/LabelFont';
 
 // 素材預載的時程：在前一個場景就把下一個場景會用到的素材排入背景佇列（依使用的先後排序），
 // 切換畫面時圖片與人聲已在快取中，不必當下才下載（Web 上會晚一拍才出現）。
@@ -13,8 +14,9 @@ const DEFERRED_BUNDLES: readonly BundleName[] = ['lobby', 'avatars', 'table'];
 
 const UI_SFX: readonly SfxName[] = ['ui_click', 'ui_open', 'ui_close', 'notice'];
 
-/** 標題畫面：其餘的包、大廳場景、大廳會用到的介面音效、頭像選項、立繪與選擇頭像的人聲 */
+/** 標題畫面：完整字型（大廳的暱稱要用）、其餘的包、大廳場景、大廳會用到的介面音效、頭像選項、立繪與選擇頭像的人聲 */
 export function preloadForLobby(): void {
+    labelFont.loadFullFont();
     void loadBundles(DEFERRED_BUNDLES);
     void preloadScene('Lobby');
     preloadResources(AUDIO_BUNDLE, UI_SFX.map(sfxPath), AudioClip);

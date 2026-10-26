@@ -1,22 +1,27 @@
 """
 產生遊戲內文字用的字型子集（Resource Han Rounded，SIL OFL 1.1）。
 
-    pnpm gen:fonts <字型資料夾>
+    pnpm gen:fonts <字型資料夾>     產生完整字型與介面字型
+    pnpm gen:fonts --ui-only        只由現有的完整字型重新產生介面字型（不需原始字型；新增的介面文字必須已在完整字型內）
 
 字型資料夾需包含 ResourceHanRoundedTW-Medium.ttf 與 ResourceHanRoundedCN-Medium.ttf，
 下載自 https://github.com/CyanoHao/Resource-Han-Rounded/releases/tag/v0.990（RHR-TW、RHR-CN）。
 需要 Python 3 與 fontTools（pip install fonttools）。
 
 系統字型（Arial）沒有中文字，瀏覽器會逐字改用其他字型，部分字沒有粗體而粗細不一，
-因此改為內建字型：簡體用 CN 字形、繁體與英文用 TW 字形。收錄的字：
-  - ASCII、常用全形標點
-  - 客戶端程式、場景與 Prefab 裡出現的所有字（含三個語系的文字）
-  - 常用字：GB2312 一級字（3755 字）與 Big5 常用字（5401 字），涵蓋大部分暱稱
+因此改為內建字型：簡體用 CN 字形、繁體與英文用 TW 字形。每個語系產生兩個檔案：
+  - rounded_<tw|cn>.ttf：完整字型（約 3MB），用於暱稱等任意文字，進入標題畫面後才在背景載入。收錄：
+      - ASCII、常用全形標點
+      - 客戶端程式、場景與 Prefab 裡出現的所有字（含三個語系的文字）
+      - 常用字：GB2312 一級字（3755 字）與 Big5 常用字（5401 字），涵蓋大部分暱稱
+  - rounded_<tw|cn>_ui.ttf：介面字型（約 0.3MB），只收 ASCII、常用全形標點，以及程式字串（不含註解）、
+    場景與 Prefab 裡的字。Loading 只等它載完就進入標題畫面，完整字型載完後再換成完整字型（同一套字型，畫面不變）。
 TW 版本沒有的字（簡體字）從 CN 版本補入，繁體介面下的簡體暱稱也能以同一字型顯示。
 修改語系文字後請重新執行；server/test 會檢查語系文字是否都已收錄。
 """
 
 import json
+import re
 import sys
 from pathlib import Path
 
@@ -31,9 +36,13 @@ FONTS = {
     'tw': {'file': 'ResourceHanRoundedTW-Medium.ttf', 'donor': 'cn'},
     'cn': {'file': 'ResourceHanRoundedCN-Medium.ttf', 'donor': None},
 }
+SCRIPTS_DIR = ROOT / 'client' / 'assets' / 'scripts'
 # 場景與 Prefab 分散在各 Asset Bundle 的資料夾，整個 assets 底下搜尋
-SOURCE_GLOBS = [('client/assets/scripts', '*.ts'), ('client/assets', '*.scene'), ('client/assets', '*.prefab')]
+SCENE_GLOBS = [('client/assets', '*.scene'), ('client/assets', '*.prefab')]
 PUNCTUATION = '，。、！？：；「」『』（）《》〈〉…・—～＋－％＄＃＆＊　'
+# 介面字型只收程式的字串（語系表、語系名稱、HUD 符號等），不收註解
+TS_COMMENT = re.compile(r'/\*.*?\*/|//[^\n]*', re.S)
+TS_STRING = re.compile(r'(["\'`])(?:\\.|(?!\1).)*\1', re.S)
 
 
 def gb2312_level1() -> set[str]:
@@ -60,11 +69,29 @@ def big5_common() -> set[str]:
     return chars
 
 
-def source_chars() -> set[str]:
+def scene_chars() -> set[str]:
     chars = set()
-    for folder, pattern in SOURCE_GLOBS:
+    for folder, pattern in SCENE_GLOBS:
         for file in (ROOT / folder).rglob(pattern):
             chars.update(c for c in file.read_text(encoding='utf-8') if ord(c) > 0x7F)
+    return chars
+
+
+def source_chars() -> set[str]:
+    """程式（含註解）、場景與 Prefab 裡的所有字"""
+    chars = scene_chars()
+    for file in SCRIPTS_DIR.rglob('*.ts'):
+        chars.update(c for c in file.read_text(encoding='utf-8') if ord(c) > 0x7F)
+    return chars
+
+
+def ui_chars() -> set[str]:
+    """介面會顯示的字：ASCII、常用全形標點，以及程式字串（不含註解）、場景與 Prefab 裡的字"""
+    chars = {chr(c) for c in range(0x20, 0x7F)} | set(PUNCTUATION) | scene_chars()
+    for file in SCRIPTS_DIR.rglob('*.ts'):
+        code = TS_COMMENT.sub('', file.read_text(encoding='utf-8'))
+        for match in TS_STRING.finditer(code):
+            chars.update(c for c in match.group(0) if ord(c) > 0x7F)
     return chars
 
 
@@ -97,9 +124,32 @@ def add_glyphs(base: TTFont, donor: TTFont) -> None:
                 table.cmap[code] = renamed[name]
 
 
+def save(font: TTFont, out: Path, key: str, coverage: dict[str, str]) -> None:
+    font.save(out)
+    unicodes = sorted(TTFont(out).getBestCmap())
+    coverage[key] = ''.join(chr(u) for u in unicodes if u > 0x7F)
+    print(f'{out.relative_to(ROOT)}：{len(unicodes)} 字，{out.stat().st_size / 1024 / 1024:.2f} MB')
+
+
+def save_ui_font(name: str, coverage: dict[str, str]) -> None:
+    """由完整字型取出介面文字，產生 rounded_<name>_ui.ttf"""
+    font = TTFont(OUT_DIR / f'rounded_{name}.ttf')
+    available = font.getBestCmap()
+    make_subset(font, sorted(ord(c) for c in ui_chars() if ord(c) in available), layout=True)
+    save(font, OUT_DIR / f'rounded_{name}_ui.ttf', f'{name}_ui', coverage)
+
+
 def main() -> None:
     if len(sys.argv) != 2:
-        sys.exit('用法：pnpm gen:fonts <字型資料夾>')
+        sys.exit('用法：pnpm gen:fonts <字型資料夾>｜--ui-only')
+
+    if sys.argv[1] == '--ui-only':
+        coverage = json.loads(COVERAGE_FILE.read_text(encoding='utf-8'))
+        for name in FONTS:
+            save_ui_font(name, coverage)
+        write_coverage(coverage)
+        return
+
     source_dir = Path(sys.argv[1])
     wanted = {chr(c) for c in range(0x20, 0x7F)} | set(PUNCTUATION) | source_chars() | gb2312_level1() | big5_common()
 
@@ -119,12 +169,13 @@ def main() -> None:
                 add_glyphs(font, donor)
                 print(f'  rounded_{name} 從 rounded_{info["donor"]} 補入 {len(missing)} 字')
 
-        out = OUT_DIR / f'rounded_{name}.ttf'
-        font.save(out)
-        unicodes = sorted(TTFont(out).getBestCmap())
-        coverage[name] = ''.join(chr(u) for u in unicodes if u > 0x7F)
-        print(f'{out.relative_to(ROOT)}：{len(unicodes)} 字，{out.stat().st_size / 1024 / 1024:.1f} MB')
+        save(font, OUT_DIR / f'rounded_{name}.ttf', name, coverage)
+        save_ui_font(name, coverage)
 
+    write_coverage(coverage)
+
+
+def write_coverage(coverage: dict[str, str]) -> None:
     COVERAGE_FILE.write_text(json.dumps(coverage, ensure_ascii=False, indent=0) + '\n', encoding='utf-8', newline='\n')
     print(f'{COVERAGE_FILE.relative_to(ROOT)}：收錄字清單（供測試檢查）')
 
