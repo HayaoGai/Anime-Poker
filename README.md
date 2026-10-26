@@ -44,7 +44,8 @@
 - 發牌、翻牌、籌碼下注與收池（貝茲曲線飛行）。
 - 沿名牌外框的倒數計時（綠→黃→紅）、攤牌時只標亮構成牌型的牌、贏家光暈。
 - 勝利橫幅（AnimationClip），以及金幣、彩帶、愛心粒子。
-- 標題與牌桌各有背景音樂，切換場景時不中斷；啟動時由黑畫面淡入。
+- 標題與牌桌各有背景音樂，切換場景時不中斷。
+- 啟動畫面不顯示 Cocos Logo：作者圖由黑幕淡入並由 0.7 倍放大到原尺寸，停留後淡出。Web 版在引擎載入前就以 HTML 顯示，原生平台由 Loading 場景播放同樣的動畫。
 
 **公平性**
 - 線上對戰的洗牌使用 `crypto.randomInt` 搭配 Fisher–Yates；伺服器與 shared 程式碼禁用 `Math.random`，由測試檢查。
@@ -91,10 +92,11 @@ INativeBridge ─┬─ WebBridge
 
 ```
 client/                 Cocos Creator 專案
-  assets/scenes/        Title、Lobby、Table
-  assets/prefabs/       彈窗、房間列表項目、Toast 等
-  assets/scripts/       app、core（MVVM、音效、彈窗…）、i18n、models、net、native、viewmodels、views
-  assets/resources/     圖片、音效、背景音樂、人聲、字型
+  assets/loading/       Loading 首場景（main 包只含這個場景）
+  assets/scripts/       app、core（MVVM、音效、彈窗、Bundle 載入…）、i18n、models、net、native、viewmodels、views
+  assets/<bundle>/      其餘素材依場景與功能拆成 Asset Bundle：common（共用彈窗、圖示、介面、粒子、字型）、
+                        title、lobby、table（各自的場景、Prefab 與圖片）、avatars（頭像與人聲）、audio（音效與背景音樂）
+  build-templates/      web-mobile 範本（引擎載入前就顯示的作者圖啟動畫面）
   native/engine/android Android 原生專案（Java + Kotlin 橋接模組）
 server/                 Colyseus 伺服器與測試（vitest）
 shared/                 用戶端與伺服器共用的規則、協定、牌局引擎與 Table
@@ -114,7 +116,9 @@ pnpm test              # 伺服器與用戶端純邏輯的測試
 pnpm typecheck         # 伺服器 + 用戶端型別檢查
 ```
 
-用 Cocos Creator 開啟 `client/`，從 `Title` 場景開始預覽。
+用 Cocos Creator 開啟 `client/`，從 `Loading` 場景開始預覽。
+
+啟動時只載入 main 包（Loading 場景），Loading 載完 scripts、common、title、audio 包、標題背景音樂與介面字型後進入標題畫面；lobby、avatars、table 包與完整字型在標題畫面於背景載入。
 
 用戶端連線的伺服器依以下順序決定：
 
@@ -132,7 +136,7 @@ pnpm typecheck         # 伺服器 + 用戶端型別檢查
 | `pnpm gen:art` | 以 SVG 產生牌面、籌碼、圖示、粒子等圖片（resvg 轉成 PNG） |
 | `pnpm gen:icon` | 由 `client/native-res/` 的前景、背景圖產生 Android 啟動圖示（自適應圖示與舊版圖示） |
 | `pnpm gen:sfx` | 以程式合成音效（WAV） |
-| `pnpm gen:fonts <字型資料夾>` | 產生遊戲內文字的字型子集（需要 Python 與 fontTools，來源字型的下載方式見 `tools/gen-fonts/subset.py`） |
+| `pnpm gen:fonts <字型資料夾>` | 產生遊戲內文字的字型子集：完整字型與介面字型（需要 Python 與 fontTools，來源字型的下載方式見 `tools/gen-fonts/subset.py`）。加上 `--ui-only` 則只由現有的完整字型重新產生介面字型，不需來源字型 |
 
 ## 部署
 
@@ -178,8 +182,8 @@ TypeScript 端統一使用 `INativeBridge` 介面，Web 與 Android 各有一份
 ## 素材
 
 - 牌面、籌碼、圖示、UI 元件與粒子由 `pnpm gen:art` 產生，音效由 `pnpm gen:sfx` 合成，都可以重現。
-- 角色頭像與立繪、標題與牌桌背景是另外製作的插圖，放在 `client/assets/resources/textures/`。
+- 角色頭像與立繪、標題、大廳與牌桌背景是另外製作的插圖，分別放在 `client/assets/avatars/textures/` 與 `client/assets/<title|lobby|table>/textures/`。
 - 產生圖片時使用的字型為 Fredoka（SIL Open Font License，見 `tools/gen-art/fonts/OFL.txt`）。
-- 遊戲內文字使用 Resource Han Rounded（SIL Open Font License，見 `client/assets/resources/fonts/OFL.txt`）。只收錄常用字與介面文字的子集；簡體中文用 CN 字形，繁體中文與英文用 TW 字形。
-- 背景音樂：標題與大廳為 Percy Doe 的〈Chilling〉，牌桌為 Trio712 的〈A Garden In A Dream〉，放在 `client/assets/resources/audio/bgm/<title|table>`。
-- 人聲依玩家的頭像播放：`client/assets/resources/audio/voice/<頭像 id>/<check|bet|call|raise|fold|allIn|select>`，缺少的檔案會被略過。
+- 遊戲內文字使用 Resource Han Rounded（SIL Open Font License，見 `client/assets/common/fonts/OFL.txt`）。只收錄常用字與介面文字的子集；簡體中文用 CN 字形，繁體中文與英文用 TW 字形。每個語系分成介面字型（只收介面文字，約 0.25MB，啟動時載入）與完整字型（含常用字，供暱稱使用，進入標題畫面後於背景載入再換上）。
+- 背景音樂：標題與大廳為 Percy Doe 的〈Chilling〉，牌桌為 Trio712 的〈A Garden In A Dream〉，放在 `client/assets/audio/bgm/<title|table>`。
+- 人聲依玩家的頭像播放：`client/assets/avatars/voice/<頭像 id>/<check|bet|call|raise|fold|allIn|select>`，缺少的檔案會被略過。
