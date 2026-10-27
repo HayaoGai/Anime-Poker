@@ -1,4 +1,4 @@
-import { _decorator, Button, Canvas, Color, director, easing, Label, Node, ParticleSystem2D, Prefab, SpriteFrame, Vec3 } from 'cc';
+import { _decorator, Button, Canvas, Color, director, easing, instantiate, Label, Node, ParticleSystem2D, Prefab, SpriteFrame, Vec3 } from 'cc';
 import { audio, voiceActionFor } from '../../core/AudioManager';
 import { backKey } from '../../core/BackKey';
 import { loadBundle, loadScene } from '../../core/Bundles';
@@ -130,6 +130,8 @@ export class TableView extends ViewBase {
     private cardFlyer: Flyer | null = null;
     private chipFlyer: Flyer | null = null;
     private readonly chipFrames = new Map<number, SpriteFrame>();
+    /** 金幣發射器（含 coinBurst 本身）：resetSystem 會清掉現有粒子，同時爆多處金幣時各用一個 */
+    private readonly coinBursts: ParticleSystem2D[] = [];
 
     private previous: TableSnapshot | null = null;
     /** 已完成發牌動畫、可顯示底牌的那一手 */
@@ -510,13 +512,25 @@ export class TableView extends ViewBase {
             this.flyChips(amount, pot, view.avatarWorldPosition, 0.6);
             const cards = this.showdownCards(seat);
             view.showWinner(event.category !== null && cards.length >= 5 ? handName(cards) : null);
-            if (this.coinBurst) {
-                this.coinBurst.node.setWorldPosition(view.avatarWorldPosition);
-                this.coinBurst.resetSystem();
-            }
+            this.burstCoins(view.avatarWorldPosition);
             if (seat === this.vm?.mySeat.value) nativeBridge.vibrate('success');
         }
         void audio.playSfx('chip_win');
+    }
+
+    /** 在指定位置爆出金幣：挑一個已發射完且粒子都消失的發射器，全都在播時複製一個新的 */
+    private burstCoins(world: Vec3): void {
+        if (!this.coinBurst) return;
+        if (this.coinBursts.length === 0) this.coinBursts.push(this.coinBurst);
+        let burst = this.coinBursts.find((p) => !p.active && p.particleCount === 0);
+        if (!burst) {
+            const node = instantiate(this.coinBurst.node);
+            node.parent = this.coinBurst.node.parent;
+            burst = node.getComponent(ParticleSystem2D)!;
+            this.coinBursts.push(burst);
+        }
+        burst.node.setWorldPosition(world);
+        burst.resetSystem();
     }
 
     /** 攤牌時某個座位的底牌加上公共牌 */
