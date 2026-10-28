@@ -65,7 +65,7 @@ export class LobbyView extends ViewBase {
                 void this.lobby?.connect();
             };
         }
-        if (this.roomPanel) this.roomPanel.onLeave = () => void this.leaveRoom();
+        if (this.roomPanel) this.roomPanel.onLeave = () => this.leaveRoom();
 
         this.lobby = new LobbyViewModel();
         this.bindings.add(this.lobby);
@@ -152,9 +152,10 @@ export class LobbyView extends ViewBase {
         this.room = null;
     }
 
-    private async leaveRoom(): Promise<void> {
+    // 不等連線關閉（最久 1.5 秒，見 RoomSession 的 leaveRoom）：期間若已建立或加入新房間，遲來的 showList 會把新房間的畫面清掉
+    private leaveRoom(): void {
         void audio.playSfx('ui_click');
-        await this.room?.leave();
+        void this.room?.leave();
         this.showList();
     }
 
@@ -166,7 +167,7 @@ export class LobbyView extends ViewBase {
 
     private onBack(): boolean {
         if (tableStore.session) {
-            void this.leaveRoom();
+            this.leaveRoom();
         } else {
             this.leavingScene = true;
             void loadScene('Title');
